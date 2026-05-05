@@ -1121,9 +1121,6 @@
           <button class="conta-tab active" id="tab-simples" onclick="setContaMode('simples')">
             <span class="conta-tab-dot"></span> Simples
           </button>
-          <button class="conta-tab" id="tab-recorrente" onclick="setContaMode('recorrente')">
-            <span class="conta-tab-dot"></span> Recorrente
-          </button>
           <button class="conta-tab" id="tab-parcelado" onclick="setContaMode('parcelado')">
             <span class="conta-tab-dot"></span> Parcelado
           </button>
@@ -1143,31 +1140,6 @@
         <div class="form-grid-2" style="margin-bottom:0">
           <!-- slot extra preenchido por modo -->
           <div id="c_extra_slot"></div>
-        </div>
-
-        <!-- EXTRA: Recorrente -->
-        <div class="conta-extra" id="extra-recorrente">
-          <div class="form-grid-2" style="margin-bottom:8px">
-            <div class="form-group">
-              <label class="form-label">Frequência de repetição</label>
-              <select id="c_freq_rec">
-                <option value="semanal">Semanal</option>
-                <option value="quinzenal">Quinzenal</option>
-                <option value="mensal" selected>Mensal</option>
-                <option value="bimestral">Bimestral</option>
-                <option value="trimestral">Trimestral</option>
-                <option value="semestral">Semestral</option>
-                <option value="anual">Anual</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Observação (opcional)</label>
-              <input type="text" id="c_obs_rec" placeholder="Ex: Plano família, cartão final 1234...">
-            </div>
-          </div>
-          <div style="font-size:11.5px;color:var(--muted);background:var(--amber-bg);border:1px solid rgba(251,191,36,.15);border-radius:var(--radius-xs);padding:8px 12px;margin-bottom:4px">
-            ♻️ A conta será cadastrada como recorrente e aparecerá automaticamente na aba <strong>Recorrentes</strong> com a frequência escolhida.
-          </div>
         </div>
 
         <!-- EXTRA: Parcelado -->
@@ -2263,8 +2235,9 @@ let contaMode = 'simples';
 
 function setContaMode(mode) {
   contaMode = mode;
-  ['simples','recorrente','parcelado'].forEach(m => {
-    document.getElementById('tab-' + m).classList.toggle('active', m === mode);
+  ['simples','parcelado'].forEach(m => {
+    const tab = document.getElementById('tab-' + m);
+    if (tab) tab.classList.toggle('active', m === mode);
     const ex = document.getElementById('extra-' + m);
     if (ex) ex.classList.toggle('visible', m === mode);
   });
@@ -2328,21 +2301,6 @@ async function addConta() {
   const venc  = document.getElementById('c_venc').value;
   const fornecedor_id = document.getElementById('c_fornecedor')?.value || null;
   if (!desc || !venc || isNaN(valor) || valor <= 0) { toast('Preencha todos os campos', false); return; }
-
-  // ── modo RECORRENTE: manda para a aba de Recorrentes ─────────────────
-  if (contaMode === 'recorrente') {
-    const freq = document.getElementById('c_freq_rec').value;
-    const obs  = document.getElementById('c_obs_rec').value.trim();
-    const list = getRecorrentes();
-    list.push({ id: Date.now().toString(), tipo: tipo === 'pagar' ? 'saida' : 'entrada', desc, cat: '', valor, freq, prox: venc, obs, ativa: true, criado: today });
-    saveRecorrentes(list);
-    document.getElementById('c_desc').value = '';
-    document.getElementById('c_valor').value = '';
-    document.getElementById('c_obs_rec').value = '';
-    toast('Conta recorrente criada ✓ (veja em Recorrentes)');
-    renderContas();
-    return;
-  }
 
   // ── modo PARCELADO: cria N contas ─────────────────────────────────────
   if (contaMode === 'parcelado') {
