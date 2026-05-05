@@ -2426,6 +2426,9 @@ async function addConta() {
     const qtd  = parseInt(document.getElementById('c_rec_qtd').value) || 12;
     const obs  = document.getElementById('c_obs_rec').value.trim();
     const dates = buildParcelaDates(venc, freq, qtd);
+    // Monta descrição com obs caso preenchido
+    const descFull = obs ? `${desc} (${obs})` : desc;
+    const freqLabel = {semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'}[freq] || freq;
     setSaving('saving');
     try {
       const usuario = currentUser?.display_name || '';
@@ -2434,29 +2437,32 @@ async function addConta() {
         dates.map((d, i) =>
           sbInsert('contas', {
             tipo,
-            descricao: desc,
+            descricao: descFull,
             valor,
             venc: d,
             pago: false,
             fornecedor_id,
-            recorrente: true,
-            recorrente_freq: freq,
-            recorrente_grupo: grupo_id,
-            recorrente_num: i + 1,
-            recorrente_total: qtd,
-            obs: obs || null,
+            parcela_grupo: grupo_id,
+            parcela_num: i + 1,
+            parcela_total: qtd,
             criado_por: usuario
           })
         )
       );
-      inserts.forEach(rows => DB.contas.unshift({ ...rows[0], desc: rows[0].descricao }));
-      await registrarAudit('criou', 'contas', grupo_id, null, { tipo, descricao: desc, valor, freq, ocorrencias: qtd });
+      // Marcar localmente como recorrente para exibição
+      inserts.forEach(rows => DB.contas.unshift({
+        ...rows[0],
+        desc: rows[0].descricao,
+        recorrente: true,
+        recorrente_freq: freq
+      }));
+      await registrarAudit('criou', 'contas', grupo_id, null, { tipo, descricao: descFull, valor, freq: freqLabel, ocorrencias: qtd });
       document.getElementById('c_desc').value  = '';
       document.getElementById('c_valor').value = '';
       document.getElementById('c_obs_rec').value = '';
       document.getElementById('rec-schedule-preview').style.display = 'none';
       setSaving('ok');
-      toast(`♻️ ${qtd} vencimentos recorrentes criados! (${freq})`);
+      toast(`♻️ ${qtd} vencimentos recorrentes criados! (${freqLabel})`);
       renderContas();
     } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
     return;
@@ -2629,14 +2635,15 @@ function statusBadge(c) {
 }
 
 function contaTipoBadge(c) {
-  const badges = [];
-  if (c.recorrente && c.recorrente_total > 1) {
-    const freqLabel = {semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'}[c.recorrente_freq] || 'Recorrente';
-    badges.push(`<span class="badge-recorr">♻ ${freqLabel} · ${c.recorrente_num}/${c.recorrente_total}</span>`);
-  } else if (c.parcela_total > 1) {
-    badges.push(`<span class="badge-parcela">🔢 ${c.parcela_num}/${c.parcela_total}</span>`);
+  const isRec = c.recorrente || (c.parcela_grupo && String(c.parcela_grupo).startsWith('rec_'));
+  if (isRec && c.parcela_total > 1) {
+    const freqLabel = ({semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'})[c.recorrente_freq] || '♻';
+    return `<span class="badge-recorr">♻ ${freqLabel} · ${c.parcela_num}/${c.parcela_total}</span>`;
   }
-  return badges.join(' ');
+  if (c.parcela_total > 1) {
+    return `<span class="badge-parcela">🔢 ${c.parcela_num}/${c.parcela_total}</span>`;
+  }
+  return '';
 }
 
 function renderContas() {
