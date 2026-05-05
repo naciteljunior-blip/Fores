@@ -608,6 +608,44 @@
     border: 1px solid rgba(251,191,36,.2); font-weight: 500; white-space: nowrap;
   }
 
+  /* ── RECORRENTE PREVIEW ── */
+  .rec-schedule-preview {
+    background: var(--bg2); border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); padding: 12px 16px; margin-top: 10px;
+  }
+  .rec-schedule-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--hint); font-weight: 500; margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .rec-timeline {
+    display: flex; flex-direction: column; gap: 0;
+    max-height: 240px; overflow-y: auto;
+  }
+  .rec-timeline-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 7px 0; border-bottom: 1px solid var(--border-light);
+    font-size: 12px;
+  }
+  .rec-timeline-item:last-child { border-bottom: none; }
+  .rec-timeline-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-light); color: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; flex-shrink: 0;
+  }
+  .rec-timeline-num.future { background: var(--amber-bg); color: var(--amber); }
+  .rec-timeline-date { flex: 1; color: var(--muted); }
+  .rec-timeline-label { font-size: 10px; color: var(--hint); }
+  .rec-timeline-val { font-family: var(--mono); font-size: 11px; color: var(--red); }
+  .rec-timeline-val.pos { color: var(--green); }
+  .rec-info-box {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: rgba(251,191,36,.06); border: 1px solid rgba(251,191,36,.15);
+    border-radius: var(--radius-xs); padding: 10px 13px; margin-top: 10px;
+    font-size: 12px; color: var(--muted); line-height: 1.5;
+  }
+
   /* ── DROPDOWN MENU ── */
   .dropdown { position: relative; display: inline-block; }
   .dropdown-menu {
@@ -1121,6 +1159,9 @@
           <button class="conta-tab active" id="tab-simples" onclick="setContaMode('simples')">
             <span class="conta-tab-dot"></span> Simples
           </button>
+          <button class="conta-tab" id="tab-recorrente" onclick="setContaMode('recorrente')">
+            <span class="conta-tab-dot"></span> Recorrente
+          </button>
           <button class="conta-tab" id="tab-parcelado" onclick="setContaMode('parcelado')">
             <span class="conta-tab-dot"></span> Parcelado
           </button>
@@ -1131,15 +1172,58 @@
           <div class="form-group"><label class="form-label">Tipo</label>
             <select id="c_tipo"><option value="pagar">A pagar</option><option value="receber">A receber</option></select></div>
           <div class="form-group"><label class="form-label">Descrição</label><input type="text" id="c_desc" placeholder="Ex: Aluguel maio"></div>
-          <div class="form-group"><label class="form-label">Valor (R$)</label><input type="number" id="c_valor" placeholder="0,00" min="0" step="0.01" oninput="updateParcelasPreview()"></div>
+          <div class="form-group"><label class="form-label">Valor (R$)</label><input type="number" id="c_valor" placeholder="0,00" min="0" step="0.01" oninput="updateParcelasPreview();updateRecorrentePreview()"></div>
         </div>
         <div class="form-grid-2">
-          <div class="form-group"><label class="form-label">Primeiro vencimento</label><input type="date" id="c_venc" oninput="updateParcelasPreview()"></div>
+          <div class="form-group"><label class="form-label">Primeiro vencimento</label><input type="date" id="c_venc" oninput="updateParcelasPreview();updateRecorrentePreview()"></div>
           <div class="form-group"><label class="form-label">Fornecedor / Cliente <span style="color:var(--hint);font-weight:400">(opcional)</span></label><select id="c_fornecedor"><option value="">— Nenhum —</option></select></div>
         </div>
         <div class="form-grid-2" style="margin-bottom:0">
           <!-- slot extra preenchido por modo -->
           <div id="c_extra_slot"></div>
+        </div>
+
+        <!-- EXTRA: Recorrente -->
+        <div class="conta-extra" id="extra-recorrente">
+          <div class="form-grid-3" style="margin-bottom:8px">
+            <div class="form-group">
+              <label class="form-label">Frequência</label>
+              <select id="c_freq_rec" onchange="updateRecorrentePreview()">
+                <option value="semanal">Semanal (toda semana)</option>
+                <option value="quinzenal">Quinzenal (a cada 15 dias)</option>
+                <option value="mensal" selected>Mensal (todo mês)</option>
+                <option value="bimestral">Bimestral (a cada 2 meses)</option>
+                <option value="trimestral">Trimestral (a cada 3 meses)</option>
+                <option value="semestral">Semestral (a cada 6 meses)</option>
+                <option value="anual">Anual (uma vez por ano)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gerar ocorrências</label>
+              <select id="c_rec_qtd" onchange="updateRecorrentePreview()">
+                <option value="12" selected>12 meses</option>
+                <option value="6">6 meses</option>
+                <option value="24">24 meses</option>
+                <option value="36">36 meses</option>
+                <option value="60">60 meses</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Observação <span style="color:var(--hint);font-weight:400">(opcional)</span></label>
+              <input type="text" id="c_obs_rec" placeholder="Ex: cartão final 1234, plano família...">
+            </div>
+          </div>
+          <!-- Preview do calendário recorrente -->
+          <div class="rec-schedule-preview" id="rec-schedule-preview" style="display:none">
+            <div class="rec-schedule-title">
+              <span>Calendário de vencimentos gerados</span>
+              <span id="rec-total-label" style="font-family:var(--mono);color:var(--accent2)"></span>
+            </div>
+            <div class="rec-timeline" id="rec-timeline-list"></div>
+          </div>
+          <div class="rec-info-box">
+            ♻️ <span>Serão criadas <strong id="rec-qtd-label">—</strong> contas agendadas automaticamente, uma para cada vencimento. Cada parcela aparece em <strong>A pagar</strong> na data certa e pode ser paga individualmente.</span>
+          </div>
         </div>
 
         <!-- EXTRA: Parcelado -->
@@ -2235,13 +2319,47 @@ let contaMode = 'simples';
 
 function setContaMode(mode) {
   contaMode = mode;
-  ['simples','parcelado'].forEach(m => {
+  ['simples','recorrente','parcelado'].forEach(m => {
     const tab = document.getElementById('tab-' + m);
     if (tab) tab.classList.toggle('active', m === mode);
     const ex = document.getElementById('extra-' + m);
     if (ex) ex.classList.toggle('visible', m === mode);
   });
-  updateParcelasPreview();
+  if (mode === 'recorrente') updateRecorrentePreview();
+  if (mode === 'parcelado')  updateParcelasPreview();
+}
+
+function updateRecorrentePreview() {
+  if (contaMode !== 'recorrente') return;
+  const freq  = document.getElementById('c_freq_rec')?.value || 'mensal';
+  const qtd   = parseInt(document.getElementById('c_rec_qtd')?.value || '12');
+  const start = document.getElementById('c_venc')?.value;
+  const valor = parseFloat(document.getElementById('c_valor')?.value) || 0;
+  const tipo  = document.getElementById('c_tipo')?.value;
+
+  // Update info text
+  const freqLabels = {semanal:'semanas',quinzenal:'quinzenas',mensal:'meses',bimestral:'bimestres',trimestral:'trimestres',semestral:'semestres',anual:'anos'};
+  document.getElementById('rec-qtd-label').textContent = `${qtd} vencimentos (${qtd} ${freqLabels[freq]||'períodos'})`;
+  document.getElementById('rec-total-label').textContent = valor > 0 ? `Total: ${fmt(valor * qtd)}` : `${qtd} ocorrências`;
+
+  if (!start) { document.getElementById('rec-schedule-preview').style.display = 'none'; return; }
+  document.getElementById('rec-schedule-preview').style.display = 'block';
+
+  const dates = buildParcelaDates(start, freq, qtd);
+  const today2 = new Date(); today2.setHours(0,0,0,0);
+  const colorCls = tipo === 'receber' ? 'pos' : '';
+
+  document.getElementById('rec-timeline-list').innerHTML = dates.map((d, i) => {
+    const dt = new Date(d + 'T12:00:00');
+    const isFuture = dt > today2;
+    const mLabel = dt.toLocaleDateString('pt-BR', {month:'short', year:'numeric'});
+    return `<div class="rec-timeline-item">
+      <div class="rec-timeline-num ${isFuture?'future':''}">${i+1}</div>
+      <div class="rec-timeline-date">${fmtD(d)}</div>
+      <div class="rec-timeline-label">${mLabel}</div>
+      ${valor > 0 ? `<div class="rec-timeline-val ${colorCls}">${fmt(valor)}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // ── helpers de data para parcelas ────────────────────────────────────────
@@ -2301,6 +2419,48 @@ async function addConta() {
   const venc  = document.getElementById('c_venc').value;
   const fornecedor_id = document.getElementById('c_fornecedor')?.value || null;
   if (!desc || !venc || isNaN(valor) || valor <= 0) { toast('Preencha todos os campos', false); return; }
+
+  // ── modo RECORRENTE: cria N contas agendadas automaticamente ─────────
+  if (contaMode === 'recorrente') {
+    const freq = document.getElementById('c_freq_rec').value;
+    const qtd  = parseInt(document.getElementById('c_rec_qtd').value) || 12;
+    const obs  = document.getElementById('c_obs_rec').value.trim();
+    const dates = buildParcelaDates(venc, freq, qtd);
+    setSaving('saving');
+    try {
+      const usuario = currentUser?.display_name || '';
+      const grupo_id = `rec_${Date.now()}`;
+      const inserts = await Promise.all(
+        dates.map((d, i) =>
+          sbInsert('contas', {
+            tipo,
+            descricao: desc,
+            valor,
+            venc: d,
+            pago: false,
+            fornecedor_id,
+            recorrente: true,
+            recorrente_freq: freq,
+            recorrente_grupo: grupo_id,
+            recorrente_num: i + 1,
+            recorrente_total: qtd,
+            obs: obs || null,
+            criado_por: usuario
+          })
+        )
+      );
+      inserts.forEach(rows => DB.contas.unshift({ ...rows[0], desc: rows[0].descricao }));
+      await registrarAudit('criou', 'contas', grupo_id, null, { tipo, descricao: desc, valor, freq, ocorrencias: qtd });
+      document.getElementById('c_desc').value  = '';
+      document.getElementById('c_valor').value = '';
+      document.getElementById('c_obs_rec').value = '';
+      document.getElementById('rec-schedule-preview').style.display = 'none';
+      setSaving('ok');
+      toast(`♻️ ${qtd} vencimentos recorrentes criados! (${freq})`);
+      renderContas();
+    } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
+    return;
+  }
 
   // ── modo PARCELADO: cria N contas ─────────────────────────────────────
   if (contaMode === 'parcelado') {
@@ -2469,10 +2629,14 @@ function statusBadge(c) {
 }
 
 function contaTipoBadge(c) {
-  if (c.parcela_total > 1) {
-    return `<span class="badge-parcela">🔢 ${c.parcela_num}/${c.parcela_total}</span>`;
+  const badges = [];
+  if (c.recorrente && c.recorrente_total > 1) {
+    const freqLabel = {semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'}[c.recorrente_freq] || 'Recorrente';
+    badges.push(`<span class="badge-recorr">♻ ${freqLabel} · ${c.recorrente_num}/${c.recorrente_total}</span>`);
+  } else if (c.parcela_total > 1) {
+    badges.push(`<span class="badge-parcela">🔢 ${c.parcela_num}/${c.parcela_total}</span>`);
   }
-  return '';
+  return badges.join(' ');
 }
 
 function renderContas() {
@@ -2498,6 +2662,7 @@ function renderContas() {
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">
           ${tipoBadge || ''}
           ${c.fornecedor_id ? `<span style="font-size:11px;color:var(--hint)">🏢 ${fornNome(c.fornecedor_id)}</span>` : ''}
+          ${c.obs ? `<span style="font-size:11px;color:var(--hint)" title="${c.obs}">💬 ${c.obs.length > 28 ? c.obs.slice(0,28)+'…' : c.obs}</span>` : ''}
         </div>
         ${st==='vencida' ? `<div style="font-size:10px;color:var(--red);margin-top:2px">⚠ Vencida</div>` : ''}
       </td>
