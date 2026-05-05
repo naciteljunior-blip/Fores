@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Caixa — Controle Financeiro</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -501,6 +502,155 @@
   .upcoming-name { font-size: 13px; font-weight: 500; }
   .upcoming-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .upcoming-val { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+
+  /* ── CONTA RECORRENTE / PARCELAMENTO ── */
+  .conta-mode-tabs {
+    display: flex; gap: 6px; margin-bottom: 14px;
+  }
+  .conta-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--bg2);
+    color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .conta-tab.active {
+    background: var(--accent-light); color: var(--accent2);
+    border-color: rgba(124,111,234,.3);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+  .conta-tab:hover:not(.active) { color: var(--text); border-color: var(--muted); }
+  .conta-tab-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor; opacity: .7;
+  }
+
+  .conta-extra { display: none; margin-top: 2px; }
+  .conta-extra.visible { display: block; }
+
+  .parcelas-preview {
+    background: var(--bg2); border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 10px;
+  }
+  .parcelas-preview-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--hint); font-weight: 500; margin-bottom: 10px;
+  }
+  .parcela-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 0; border-bottom: 1px solid var(--border-light);
+    font-size: 12px;
+  }
+  .parcela-row:last-child { border-bottom: none; }
+  .parcela-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-light); color: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; flex-shrink: 0;
+  }
+  .parcela-info { flex: 1; padding: 0 10px; }
+  .parcela-date { color: var(--muted); font-size: 11px; margin-top: 1px; }
+  .parcela-val { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--red); }
+  .parcela-val.pos { color: var(--green); }
+
+  .badge-parcela {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; padding: 2px 7px; border-radius: 20px;
+    background: rgba(124,111,234,.12); color: var(--accent2);
+    border: 1px solid rgba(124,111,234,.2); font-weight: 500; white-space: nowrap;
+  }
+  .badge-recorr {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; padding: 2px 7px; border-radius: 20px;
+    background: var(--amber-bg); color: var(--amber);
+    border: 1px solid rgba(251,191,36,.2); font-weight: 500; white-space: nowrap;
+  }
+
+  /* ── DROPDOWN MENU ── */
+  .dropdown { position: relative; display: inline-block; }
+  .dropdown-menu {
+    position: absolute; right: 0; top: calc(100% + 4px);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); min-width: 160px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.45);
+    z-index: 50; overflow: hidden;
+    animation: dropIn .15s cubic-bezier(.4,0,.2,1);
+    display: none;
+  }
+  .dropdown-menu.open { display: block; }
+  @keyframes dropIn { from { opacity:0; transform:translateY(-6px) scale(.97); } to { opacity:1; transform:none; } }
+  .dropdown-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 14px; font-size: 13px; cursor: pointer;
+    color: var(--text); transition: background .12s;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .dropdown-item:hover { background: var(--border-light); }
+  .dropdown-item.danger { color: var(--red); }
+  .dropdown-item.danger:hover { background: var(--red-bg); }
+  .dropdown-item.success { color: var(--green); }
+  .dropdown-item.success:hover { background: var(--green-bg); }
+  .dropdown-divider { height: 1px; background: var(--border-light); margin: 3px 0; }
+  .btn-dots {
+    background: none; border: none; cursor: pointer;
+    padding: 5px 8px; border-radius: var(--radius-xs);
+    color: var(--hint); font-size: 16px; line-height: 1;
+    transition: all .2s; letter-spacing: 1px;
+  }
+  .btn-dots:hover { background: var(--surface2); color: var(--text); }
+
+  /* ── MODAL ── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    backdrop-filter: blur(3px); z-index: 300;
+    display: flex; align-items: center; justify-content: center;
+    animation: fadeIn .2s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .modal-backdrop.hidden { display: none; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px 28px 24px;
+    width: 100%; max-width: 440px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.6);
+    animation: boxIn .22s cubic-bezier(.4,0,.2,1);
+  }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 18px; letter-spacing: -.3px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  /* ── FEED ENTRADA/SAÍDA ── */
+  .feed-list { display: flex; flex-direction: column; }
+  .feed-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 0; border-bottom: 1px solid var(--border-light);
+    transition: background .1s;
+  }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .feed-dot.in  { background: var(--green); box-shadow: 0 0 6px var(--green-mid); }
+  .feed-dot.out { background: var(--red);   box-shadow: 0 0 6px var(--red-mid); }
+  .feed-body { flex: 1; min-width: 0; }
+  .feed-desc { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feed-meta { font-size: 11px; color: var(--hint); margin-top: 2px; }
+  .feed-val { font-family: var(--mono); font-size: 13px; font-weight: 500; flex-shrink: 0; }
+  .feed-val.in  { color: var(--green); }
+  .feed-val.out { color: var(--red); }
+  /* ── CONFETTI ── */
+  .confetti-piece {
+    position: fixed;
+    width: 9px; height: 9px;
+    top: -10px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 9999;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(0) rotateZ(0deg) rotateX(0deg); opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateY(105vh) rotateZ(720deg) rotateX(360deg); opacity: 0; }
+  }
 </style>
 </head>
 <body>
@@ -601,9 +751,9 @@
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 7h14"/><circle cx="5" cy="10.5" r=".8" fill="currentColor" stroke="none"/></svg>
         Contas
       </button>
-      <button class="nav-item" onclick="showPage('recorrentes')">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8a6 6 0 1 0 1.5-3.9"/><path d="M2 4v4h4"/></svg>
-        Recorrentes
+      <button class="nav-item" onclick="showPage('movimentos')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>
+        Movimentações
       </button>
       <div class="nav-section">Configuração</div>
       <button class="nav-item" onclick="showPage('categorias')">
@@ -739,15 +889,89 @@
       </div>
       <div class="card">
         <div class="card-title">Nova conta</div>
+
+        <!-- Tipo de lançamento -->
+        <div class="conta-mode-tabs">
+          <button class="conta-tab active" id="tab-simples" onclick="setContaMode('simples')">
+            <span class="conta-tab-dot"></span> Simples
+          </button>
+          <button class="conta-tab" id="tab-recorrente" onclick="setContaMode('recorrente')">
+            <span class="conta-tab-dot"></span> Recorrente
+          </button>
+          <button class="conta-tab" id="tab-parcelado" onclick="setContaMode('parcelado')">
+            <span class="conta-tab-dot"></span> Parcelado
+          </button>
+        </div>
+
+        <!-- Campos comuns -->
         <div class="form-grid-3">
           <div class="form-group"><label class="form-label">Tipo</label>
             <select id="c_tipo"><option value="pagar">A pagar</option><option value="receber">A receber</option></select></div>
           <div class="form-group"><label class="form-label">Descrição</label><input type="text" id="c_desc" placeholder="Ex: Aluguel maio"></div>
-          <div class="form-group"><label class="form-label">Valor (R$)</label><input type="number" id="c_valor" placeholder="0,00" min="0" step="0.01"></div>
+          <div class="form-group"><label class="form-label">Valor (R$)</label><input type="number" id="c_valor" placeholder="0,00" min="0" step="0.01" oninput="updateParcelasPreview()"></div>
         </div>
-        <div class="form-grid-2" style="margin-bottom:12px">
-          <div class="form-group"><label class="form-label">Vencimento</label><input type="date" id="c_venc"></div>
-          <div class="form-group" style="justify-content:flex-end"><button class="btn btn-primary" onclick="addConta()" style="margin-top:auto">+ Adicionar conta</button></div>
+        <div class="form-grid-2">
+          <div class="form-group"><label class="form-label">Primeiro vencimento</label><input type="date" id="c_venc" oninput="updateParcelasPreview()"></div>
+          <!-- slot extra preenchido por modo -->
+          <div id="c_extra_slot"></div>
+        </div>
+
+        <!-- EXTRA: Recorrente -->
+        <div class="conta-extra" id="extra-recorrente">
+          <div class="form-grid-2" style="margin-bottom:8px">
+            <div class="form-group">
+              <label class="form-label">Frequência de repetição</label>
+              <select id="c_freq_rec">
+                <option value="semanal">Semanal</option>
+                <option value="quinzenal">Quinzenal</option>
+                <option value="mensal" selected>Mensal</option>
+                <option value="bimestral">Bimestral</option>
+                <option value="trimestral">Trimestral</option>
+                <option value="semestral">Semestral</option>
+                <option value="anual">Anual</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Observação (opcional)</label>
+              <input type="text" id="c_obs_rec" placeholder="Ex: Plano família, cartão final 1234...">
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);background:var(--amber-bg);border:1px solid rgba(251,191,36,.15);border-radius:var(--radius-xs);padding:8px 12px;margin-bottom:4px">
+            ♻️ A conta será cadastrada como recorrente e aparecerá automaticamente na aba <strong>Recorrentes</strong> com a frequência escolhida.
+          </div>
+        </div>
+
+        <!-- EXTRA: Parcelado -->
+        <div class="conta-extra" id="extra-parcelado">
+          <div class="form-grid-3" style="margin-bottom:8px">
+            <div class="form-group">
+              <label class="form-label">Número de parcelas</label>
+              <input type="number" id="c_parcelas" placeholder="Ex: 12" min="2" max="360" step="1" oninput="updateParcelasPreview()" value="2">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Intervalo entre parcelas</label>
+              <select id="c_freq_parc" onchange="updateParcelasPreview()">
+                <option value="semanal">Semanal (7 dias)</option>
+                <option value="quinzenal">Quinzenal (15 dias)</option>
+                <option value="mensal" selected>Mensal (30 dias)</option>
+                <option value="bimestral">Bimestral (60 dias)</option>
+                <option value="trimestral">Trimestral (90 dias)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valor por parcela</label>
+              <input type="number" id="c_valor_parc" placeholder="Calculado automaticamente" min="0" step="0.01" readonly style="color:var(--accent2);font-weight:500">
+            </div>
+          </div>
+          <!-- Preview das parcelas -->
+          <div class="parcelas-preview" id="parcelas-preview" style="display:none">
+            <div class="parcelas-preview-title">Prévia das parcelas</div>
+            <div id="parcelas-list"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <button class="btn btn-primary" onclick="addConta()">+ Adicionar conta</button>
         </div>
       </div>
       <div class="filter-bar">
@@ -764,21 +988,47 @@
         <div class="filter-spacer"></div>
         <button class="btn btn-ghost btn-sm" onclick="resetFilter('contas')">Limpar</button>
       </div>
-      <div class="two-col">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+
+        <!-- A PAGAR -->
         <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:16px 20px 0"><div class="card-title">A pagar</div></div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>Descrição</th><th style="width:85px">Vencimento</th><th style="width:95px">Valor</th><th style="width:75px">Status</th><th style="width:35px"></th></tr></thead>
+          <div style="padding:14px 18px 0;display:flex;align-items:center;gap:8px">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber)"></div>
+            <div class="card-title" style="margin:0">A pagar</div>
+            <span id="ct-pagar-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
+          </div>
+          <div class="table-wrap" style="padding:0 0 4px"><table>
+            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
             <tbody id="ct-pagar"></tbody>
           </table></div>
         </div>
+
+        <!-- PAGOS -->
         <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:16px 20px 0"><div class="card-title">A receber</div></div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>Descrição</th><th style="width:85px">Vencimento</th><th style="width:95px">Valor</th><th style="width:75px">Status</th><th style="width:35px"></th></tr></thead>
+          <div style="padding:14px 18px 0;display:flex;align-items:center;gap:8px">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green-mid)"></div>
+            <div class="card-title" style="margin:0">Pagos</div>
+            <span id="ct-pagos-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
+          </div>
+          <div class="table-wrap" style="padding:0 0 4px"><table>
+            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:90px">Dt. Pagamento</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
+            <tbody id="ct-pagos"></tbody>
+          </table></div>
+        </div>
+
+        <!-- A RECEBER -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:14px 18px 0;display:flex;align-items:center;gap:8px">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 6px var(--accent)"></div>
+            <div class="card-title" style="margin:0">A receber</div>
+            <span id="ct-receber-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
+          </div>
+          <div class="table-wrap" style="padding:0 0 4px"><table>
+            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
             <tbody id="ct-receber"></tbody>
           </table></div>
         </div>
+
       </div>
     </div>
 
@@ -913,7 +1163,134 @@
       </div>
     </div>
 
+    <!-- MOVIMENTAÇÕES -->
+    <div id="p-movimentos" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Registro de Movimentações</div>
+          <div class="page-subtitle">Histórico completo de entradas e saídas com data e hora</div>
+        </div>
+        <button class="btn btn-primary" onclick="exportMovimentos()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M3 12h10"/></svg>
+          Exportar Excel
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">Tipo</span>
+          <select id="mv_tipo" onchange="renderMovimentos()">
+            <option value="">Todos</option>
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Período</span>
+          <select id="mv_periodo" onchange="renderMovimentos()">
+            <option value="">Todos</option>
+            <option value="hoje">Hoje</option>
+            <option value="semana">Esta semana</option>
+            <option value="mes">Este mês</option>
+            <option value="trim">Últimos 3 meses</option>
+            <option value="ano">Este ano</option>
+            <option value="custom">Intervalo</option>
+          </select>
+        </div>
+        <div class="filter-group" id="mv_custom_wrap" style="display:none">
+          <span class="filter-label">De</span>
+          <input type="date" id="mv_de" oninput="renderMovimentos()" style="width:130px">
+        </div>
+        <div class="filter-group" id="mv_custom_wrap2" style="display:none">
+          <span class="filter-label">Até</span>
+          <input type="date" id="mv_ate" oninput="renderMovimentos()" style="width:130px">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Categoria</span>
+          <select id="mv_cat" onchange="renderMovimentos()"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Busca</span>
+          <input type="text" id="mv_search" placeholder="Descrição..." oninput="renderMovimentos()" style="min-width:130px">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Ordenar por</span>
+          <select id="mv_ordem" onchange="renderMovimentos()">
+            <option value="data_desc">Data ↓ (mais recente)</option>
+            <option value="data_asc">Data ↑ (mais antigo)</option>
+            <option value="valor_desc">Valor ↓ (maior)</option>
+            <option value="valor_asc">Valor ↑ (menor)</option>
+            <option value="desc_az">Descrição A→Z</option>
+            <option value="desc_za">Descrição Z→A</option>
+          </select>
+        </div>
+        <div class="filter-spacer"></div>
+        <button class="btn btn-ghost btn-sm" onclick="resetFilter('movimentos')">Limpar</button>
+      </div>
+
+      <!-- Métricas rápidas -->
+      <div class="metrics" id="mv-metrics" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px"></div>
+
+      <!-- Feed -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between">
+          <div class="card-title" style="margin:0">Movimentos</div>
+          <span id="mv-count" style="font-size:11px;color:var(--hint)"></span>
+        </div>
+        <div style="padding:0 20px 16px">
+          <div class="feed-list" id="mv-feed"></div>
+        </div>
+      </div>
+    </div>
+
   </main>
+</div>
+
+<!-- MODAL ALTERAR CONTA -->
+<div id="modal-conta" class="modal-backdrop hidden">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Alterar conta</div>
+    <input type="hidden" id="edit_id">
+    <div class="form-grid-2" style="margin-bottom:12px">
+      <div class="form-group"><label class="form-label">Tipo</label>
+        <select id="edit_tipo"><option value="pagar">A pagar</option><option value="receber">A receber</option></select></div>
+      <div class="form-group"><label class="form-label">Descrição</label>
+        <input type="text" id="edit_desc" placeholder="Descrição"></div>
+    </div>
+    <div class="form-grid-2" style="margin-bottom:0">
+      <div class="form-group"><label class="form-label">Valor (R$)</label>
+        <input type="number" id="edit_valor" placeholder="0,00" min="0" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Vencimento</label>
+        <input type="date" id="edit_venc"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicaoConta()">Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR PAGAMENTO -->
+<div id="modal-pagamento" class="modal-backdrop hidden">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-title">💸 Confirmar pagamento</div>
+    <input type="hidden" id="pag_id">
+    <div style="margin-bottom:14px;font-size:13px;color:var(--muted)">
+      <span id="pag_desc_label" style="font-weight:600;color:var(--text)"></span>
+      &nbsp;·&nbsp;
+      <span id="pag_valor_label" style="font-family:var(--mono);color:var(--red)"></span>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Data de pagamento</label>
+      <input type="date" id="pag_data">
+      <div style="font-size:11px;color:var(--hint);margin-top:5px">Informe a data real do pagamento (pode ser antes ou depois do vencimento)</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cancelarPagamento()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarPagamento()">✓ Confirmar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1174,15 +1551,17 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('p-' + id).classList.add('active');
-  const idx = ['dashboard','lancamentos','contas','recorrentes','categorias'].indexOf(id);
+  const idx = ['dashboard','lancamentos','contas','movimentos','categorias'].indexOf(id);
   document.querySelectorAll('.nav-item')[idx].classList.add('active');
   if (id === 'recorrentes') { syncRecCatSelect(); renderRecorrentes(); }
+  if (id === 'movimentos')  { syncMvCatSelect(); renderMovimentos(); }
 }
 
 function resetFilter(s) {
   if (s==='dashboard')   { document.getElementById('d_periodo').value='mes'; document.getElementById('d_cat').value=''; renderDashboard(); }
   if (s==='lancamentos') { ['lf_periodo','lf_tipo','lf_cat'].forEach(id=>document.getElementById(id).value=''); document.getElementById('lf_search').value=''; renderLancamentos(); }
   if (s==='contas')      { document.getElementById('cf_status').value=''; document.getElementById('cf_search').value=''; renderContas(); }
+  if (s==='movimentos')  { ['mv_tipo','mv_periodo','mv_cat','mv_ordem'].forEach(id=>document.getElementById(id).value=''); document.getElementById('mv_search').value=''; ['mv_custom_wrap','mv_custom_wrap2'].forEach(id=>document.getElementById(id).style.display='none'); renderMovimentos(); }
   if (s==='recorrentes') { ['rcf_tipo','rcf_freq','rcf_status'].forEach(id=>document.getElementById(id).value=''); renderRecorrentes(); }
 }
 
@@ -1336,32 +1715,403 @@ function clearLF(key) {
   renderLancamentos();
 }
 
-// ── CONTAS ────────────────────────────────────────────────────────────────
+// ── MOVIMENTAÇÕES ─────────────────────────────────────────────────────────
+function syncMvCatSelect() {
+  const el = document.getElementById('mv_cat'); if (!el) return;
+  const cur = el.value;
+  el.innerHTML = '<option value="">Todas</option>' + DB.categorias.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+  el.value = cur;
+}
+
+function getMvFiltered() {
+  const tipo    = document.getElementById('mv_tipo')?.value    || '';
+  const periodo = document.getElementById('mv_periodo')?.value || '';
+  const cat     = document.getElementById('mv_cat')?.value     || '';
+  const search  = (document.getElementById('mv_search')?.value || '').toLowerCase();
+  const de      = document.getElementById('mv_de')?.value  || '';
+  const ate     = document.getElementById('mv_ate')?.value || '';
+
+  // show/hide custom date fields
+  const isCustom = periodo === 'custom';
+  document.getElementById('mv_custom_wrap').style.display  = isCustom ? '' : 'none';
+  document.getElementById('mv_custom_wrap2').style.display = isCustom ? '' : 'none';
+
+  const now = new Date(); now.setHours(23,59,59,999);
+  return [...DB.lancamentos].filter(l => {
+    if (tipo && l.tipo !== tipo) return false;
+    if (cat  && l.cat  !== cat)  return false;
+    if (search && !l.desc.toLowerCase().includes(search)) return false;
+    const d = new Date(l.data + 'T12:00:00');
+    if (periodo === 'hoje') {
+      const t = new Date(); if (d.toDateString() !== t.toDateString()) return false;
+    } else if (periodo === 'semana') {
+      const s = new Date(now); s.setDate(now.getDate() - 6); s.setHours(0,0,0,0);
+      if (d < s) return false;
+    } else if (periodo === 'mes') {
+      if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+    } else if (periodo === 'trim') {
+      const s = new Date(now); s.setMonth(s.getMonth()-2); s.setDate(1); s.setHours(0,0,0,0);
+      if (d < s) return false;
+    } else if (periodo === 'ano') {
+      if (d.getFullYear() !== now.getFullYear()) return false;
+    } else if (periodo === 'custom') {
+      if (de  && d < new Date(de  + 'T00:00:00')) return false;
+      if (ate && d > new Date(ate + 'T23:59:59')) return false;
+    }
+    return true;
+  }).sort((a,b) => {
+    const ordem = document.getElementById('mv_ordem')?.value || 'data_desc';
+    if (ordem === 'data_desc') {
+      const ta = a.created_at || a.data; const tb = b.created_at || b.data;
+      return new Date(tb) - new Date(ta);
+    } else if (ordem === 'data_asc') {
+      const ta = a.created_at || a.data; const tb = b.created_at || b.data;
+      return new Date(ta) - new Date(tb);
+    } else if (ordem === 'valor_desc') {
+      return Number(b.valor) - Number(a.valor);
+    } else if (ordem === 'valor_asc') {
+      return Number(a.valor) - Number(b.valor);
+    } else if (ordem === 'desc_az') {
+      return (a.desc||'').localeCompare(b.desc||'', 'pt-BR');
+    } else if (ordem === 'desc_za') {
+      return (b.desc||'').localeCompare(a.desc||'', 'pt-BR');
+    }
+    return 0;
+  });
+}
+
+function renderMovimentos() {
+  syncMvCatSelect();
+  const filtered = getMvFiltered();
+
+  const entradas = filtered.filter(l=>l.tipo==='entrada').reduce((s,l)=>s+Number(l.valor),0);
+  const saidas   = filtered.filter(l=>l.tipo==='saida').reduce((s,l)=>s+Number(l.valor),0);
+  const saldo    = entradas - saidas;
+
+  document.getElementById('mv-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total registros</div><div class="metric-value">${filtered.length}</div></div>
+    <div class="metric"><div class="metric-label">Entradas</div><div class="metric-value pos">${fmt(entradas)}</div></div>
+    <div class="metric"><div class="metric-label">Saídas</div><div class="metric-value neg">${fmt(saidas)}</div></div>
+    <div class="metric"><div class="metric-label">Saldo</div><div class="metric-value ${saldo>=0?'pos':'neg'}">${fmt(saldo)}</div></div>`;
+
+  document.getElementById('mv-count').textContent = `${filtered.length} registro(s)`;
+
+  const feed = document.getElementById('mv-feed');
+  if (!filtered.length) {
+    feed.innerHTML = '<div style="text-align:center;color:var(--hint);padding:28px;font-size:13px">Nenhuma movimentação encontrada</div>';
+    return;
+  }
+
+  const ordem = document.getElementById('mv_ordem')?.value || 'data_desc';
+
+  // helper: renderiza um item
+  const renderItem = l => {
+    const isIn = l.tipo === 'entrada';
+    const dt = l.created_at ? new Date(l.created_at) : null;
+    const timePart = dt ? dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
+    return `<div class="feed-item">
+      <div class="feed-dot ${isIn?'in':'out'}"></div>
+      <div class="feed-body">
+        <div class="feed-desc">${l.desc}${l.cat?` <span style="font-size:11px;color:var(--hint);font-weight:400">· ${l.cat}</span>`:''}
+        </div>
+        <div class="feed-meta">⏱ ${timePart}</div>
+      </div>
+      <div class="feed-val ${isIn?'in':'out'}">${isIn?'+':'-'}${fmt(Number(l.valor))}</div>
+    </div>`;
+  };
+
+  const dayLabel = date => {
+    const d = new Date(date+'T12:00:00');
+    const t = new Date(); const y = new Date(); y.setDate(y.getDate()-1);
+    if (d.toDateString()===t.toDateString()) return 'Hoje';
+    if (d.toDateString()===y.toDateString()) return 'Ontem';
+    return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  };
+
+  // sempre agrupa por data — dias do mais recente para o mais antigo
+  // exceto data_asc que inverte a ordem dos dias
+  const groups = {};
+  filtered.forEach(l => { if (!groups[l.data]) groups[l.data] = []; groups[l.data].push(l); });
+  const sortedDates = Object.keys(groups).sort((a,b) =>
+    ordem === 'data_asc' ? new Date(a) - new Date(b) : new Date(b) - new Date(a)
+  );
+
+  feed.innerHTML = sortedDates.map(date => {
+    let items = [...groups[date]];
+    // ordenar itens dentro do grupo conforme critério
+    if      (ordem === 'data_desc') items.sort((a,b) => new Date(b.created_at||b.data) - new Date(a.created_at||a.data));
+    else if (ordem === 'data_asc')  items.sort((a,b) => new Date(a.created_at||a.data) - new Date(b.created_at||b.data));
+    else if (ordem === 'valor_desc') items.sort((a,b) => Number(b.valor) - Number(a.valor));
+    else if (ordem === 'valor_asc')  items.sort((a,b) => Number(a.valor) - Number(b.valor));
+    else if (ordem === 'desc_az')    items.sort((a,b) => (a.desc||'').localeCompare(b.desc||'','pt-BR'));
+    else if (ordem === 'desc_za')    items.sort((a,b) => (b.desc||'').localeCompare(a.desc||'','pt-BR'));
+
+    const dayEnt = items.filter(l=>l.tipo==='entrada').reduce((s,l)=>s+Number(l.valor),0);
+    const daySai = items.filter(l=>l.tipo==='saida').reduce((s,l)=>s+Number(l.valor),0);
+    return `<div style="padding:14px 0 4px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-light);margin-bottom:2px">
+      <span style="font-size:11.5px;font-weight:600;color:var(--muted);text-transform:capitalize">${dayLabel(date)}</span>
+      <span style="font-size:11px;font-family:var(--mono);color:var(--hint)">
+        ${dayEnt>0?`<span style="color:var(--green)">+${fmt(dayEnt)}</span>`:''}
+        ${daySai>0?`<span style="color:var(--red);margin-left:6px">-${fmt(daySai)}</span>`:''}
+      </span>
+    </div>${items.map(renderItem).join('')}`;
+  }).join('');
+}
+
+function exportMovimentos() {
+  const filtered = getMvFiltered();
+  if (!filtered.length) { toast('Nenhum registro para exportar', false); return; }
+
+  const rows = filtered.map(l => {
+    const dt = l.created_at ? new Date(l.created_at) : null;
+    return {
+      'Data':       fmtD(l.data),
+      'Hora':       dt ? dt.toLocaleTimeString('pt-BR') : '',
+      'Tipo':       l.tipo === 'entrada' ? 'Entrada' : 'Saída',
+      'Descrição':  l.desc,
+      'Categoria':  l.cat || '',
+      'Valor (R$)': Number(l.valor),
+      'Sinal':      l.tipo === 'entrada' ? `+${fmt(Number(l.valor))}` : `-${fmt(Number(l.valor))}`
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  // column widths
+  ws['!cols'] = [12,10,10,32,18,14,18].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Movimentações');
+
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `movimentacoes_${stamp}.xlsx`);
+  toast(`${filtered.length} registros exportados ✓`);
+}
+
+// ── CONTAS — modo (simples / recorrente / parcelado) ─────────────────────
+let contaMode = 'simples';
+
+function setContaMode(mode) {
+  contaMode = mode;
+  ['simples','recorrente','parcelado'].forEach(m => {
+    document.getElementById('tab-' + m).classList.toggle('active', m === mode);
+    const ex = document.getElementById('extra-' + m);
+    if (ex) ex.classList.toggle('visible', m === mode);
+  });
+  updateParcelasPreview();
+}
+
+// ── helpers de data para parcelas ────────────────────────────────────────
+function nextContaDate(dateStr, freq) {
+  const d = new Date(dateStr + 'T12:00:00');
+  if      (freq === 'semanal')     d.setDate(d.getDate() + 7);
+  else if (freq === 'quinzenal')   d.setDate(d.getDate() + 15);
+  else if (freq === 'mensal')      d.setMonth(d.getMonth() + 1);
+  else if (freq === 'bimestral')   d.setMonth(d.getMonth() + 2);
+  else if (freq === 'trimestral')  d.setMonth(d.getMonth() + 3);
+  else if (freq === 'semestral')   d.setMonth(d.getMonth() + 6);
+  else if (freq === 'anual')       d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().split('T')[0];
+}
+
+function buildParcelaDates(start, freq, n) {
+  const dates = [start];
+  for (let i = 1; i < n; i++) dates.push(nextContaDate(dates[i-1], freq));
+  return dates;
+}
+
+function updateParcelasPreview() {
+  if (contaMode !== 'parcelado') return;
+  const valor    = parseFloat(document.getElementById('c_valor').value) || 0;
+  const n        = parseInt(document.getElementById('c_parcelas').value) || 0;
+  const freq     = document.getElementById('c_freq_parc').value;
+  const start    = document.getElementById('c_venc').value;
+  const tipo     = document.getElementById('c_tipo').value;
+  const preview  = document.getElementById('parcelas-preview');
+  const list     = document.getElementById('parcelas-list');
+  const vpEl     = document.getElementById('c_valor_parc');
+
+  if (valor <= 0 || n < 2 || !start) { preview.style.display = 'none'; vpEl.value = ''; return; }
+
+  const vp = Math.round((valor / n) * 100) / 100;
+  vpEl.value = vp.toFixed(2);
+  const dates = buildParcelaDates(start, freq, n);
+  const colorCls = tipo === 'receber' ? 'pos' : '';
+  const show = Math.min(n, 6);
+  list.innerHTML = dates.slice(0, show).map((d, i) =>
+    `<div class="parcela-row">
+      <div class="parcela-num">${i+1}</div>
+      <div class="parcela-info">
+        <div>Parcela ${i+1}/${n}</div>
+        <div class="parcela-date">${fmtD(d)}</div>
+      </div>
+      <div class="parcela-val ${colorCls}">${fmt(vp)}</div>
+    </div>`
+  ).join('') + (n > show ? `<div style="font-size:11px;color:var(--hint);padding:6px 0 2px;text-align:center">… e mais ${n - show} parcela(s)</div>` : '');
+  preview.style.display = 'block';
+}
+
 async function addConta() {
   const tipo  = document.getElementById('c_tipo').value;
   const desc  = document.getElementById('c_desc').value.trim();
   const valor = parseFloat(document.getElementById('c_valor').value);
   const venc  = document.getElementById('c_venc').value;
-  if (!desc||!venc||isNaN(valor)||valor<=0) { toast('Preencha todos os campos', false); return; }
+  if (!desc || !venc || isNaN(valor) || valor <= 0) { toast('Preencha todos os campos', false); return; }
+
+  // ── modo RECORRENTE: manda para a aba de Recorrentes ─────────────────
+  if (contaMode === 'recorrente') {
+    const freq = document.getElementById('c_freq_rec').value;
+    const obs  = document.getElementById('c_obs_rec').value.trim();
+    const list = getRecorrentes();
+    list.push({ id: Date.now().toString(), tipo: tipo === 'pagar' ? 'saida' : 'entrada', desc, cat: '', valor, freq, prox: venc, obs, ativa: true, criado: today });
+    saveRecorrentes(list);
+    document.getElementById('c_desc').value = '';
+    document.getElementById('c_valor').value = '';
+    document.getElementById('c_obs_rec').value = '';
+    toast('Conta recorrente criada ✓ (veja em Recorrentes)');
+    renderContas();
+    return;
+  }
+
+  // ── modo PARCELADO: cria N contas ─────────────────────────────────────
+  if (contaMode === 'parcelado') {
+    const n    = parseInt(document.getElementById('c_parcelas').value);
+    const freq = document.getElementById('c_freq_parc').value;
+    if (!n || n < 2) { toast('Informe ao menos 2 parcelas', false); return; }
+    const vp    = Math.round((valor / n) * 100) / 100;
+    const dates = buildParcelaDates(venc, freq, n);
+    setSaving('saving');
+    try {
+      const inserts = await Promise.all(
+        dates.map((d, i) =>
+          sbInsert('contas', { tipo, descricao: `${desc} (${i+1}/${n})`, valor: vp, venc: d, pago: false, parcela_grupo: desc, parcela_num: i+1, parcela_total: n })
+        )
+      );
+      inserts.forEach(rows => DB.contas.unshift({...rows[0], desc: rows[0].descricao}));
+      document.getElementById('c_desc').value = '';
+      document.getElementById('c_valor').value = '';
+      document.getElementById('c_parcelas').value = '2';
+      document.getElementById('parcelas-preview').style.display = 'none';
+      setSaving('ok'); toast(`${n} parcelas criadas ✓`);
+      renderContas();
+    } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
+    return;
+  }
+
+  // ── modo SIMPLES (padrão) ─────────────────────────────────────────────
   setSaving('saving');
   try {
-    const rows = await sbInsert('contas', {tipo, descricao:desc, valor, venc, pago:false});
+    const rows = await sbInsert('contas', { tipo, descricao: desc, valor, venc, pago: false });
     DB.contas.unshift({...rows[0], desc: rows[0].descricao});
-    document.getElementById('c_desc').value='';
-    document.getElementById('c_valor').value='';
+    document.getElementById('c_desc').value = '';
+    document.getElementById('c_valor').value = '';
     setSaving('ok'); toast('Conta adicionada');
     renderContas();
-  } catch(e) { setSaving('err'); toast('Erro: '+e.message, false); }
+  } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
+}
+
+// ── CONFETTI ──────────────────────────────────────────────────────────────
+function launchConfetti() {
+  const colors = ['#7c6fea','#34d399','#fbbf24','#f87171','#60a5fa','#a78bfa','#10b981','#fb923c'];
+  const shapes = ['square','circle'];
+  const total  = 120;
+  for (let i = 0; i < total; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+    const size  = 6 + Math.random() * 8;
+    const left  = Math.random() * 100;
+    const delay = Math.random() * 0.6;
+    const dur   = 1.8 + Math.random() * 1.4;
+    const drift = (Math.random() - 0.5) * 200;
+    el.style.cssText = `
+      left:${left}vw; width:${size}px; height:${size}px;
+      background:${color};
+      border-radius:${shape==='circle'?'50%':'2px'};
+      animation-duration:${dur}s;
+      animation-delay:${delay}s;
+      transform:translateX(${drift}px);
+    `;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
 }
 
 async function togglePago(id) {
   const c = DB.contas.find(c=>c.id===id); if (!c) return;
+  const wasUnpaid = !c.pago;
+  let dataPagamento = null;
+
+  if (wasUnpaid) {
+    const confirmed = await openPagamentoModal(id);
+    if (!confirmed) return;
+    dataPagamento = document.getElementById('pag_data').value || today;
+  }
+
   setSaving('saving');
   try {
-    await sbUpdate('contas', id, {pago: !c.pago});
-    c.pago = !c.pago;
-    setSaving('ok'); renderContas();
+    if (wasUnpaid) {
+      // ── PAGAR: cria lançamento correspondente ──────────────────────────
+      const tipo = c.tipo === 'pagar' ? 'saida' : 'entrada';
+      const lancRows = await sbInsert('lancamentos', {
+        tipo,
+        data: dataPagamento,
+        descricao: c.desc,
+        cat: c.cat || '',
+        valor: c.valor,
+        origem_conta_id: c.id
+      });
+      const novoLanc = { ...lancRows[0], desc: lancRows[0].descricao };
+      DB.lancamentos.unshift(novoLanc);
+
+      await sbUpdate('contas', id, { pago: true, data_pagamento: dataPagamento, lancamento_id: novoLanc.id });
+      c.pago = true;
+      c.data_pagamento = dataPagamento;
+      c.lancamento_id = novoLanc.id;
+
+      launchConfetti();
+      toast('💸 Conta paga e lançamento criado! ✓');
+    } else {
+      // ── DESFAZER: remove lançamento vinculado se existir ──────────────
+      if (c.lancamento_id) {
+        try {
+          await sbDelete('lancamentos', c.lancamento_id);
+          DB.lancamentos = DB.lancamentos.filter(l => l.id !== c.lancamento_id);
+        } catch(e) { /* lançamento pode já ter sido removido manualmente */ }
+      }
+      await sbUpdate('contas', id, { pago: false, data_pagamento: null, lancamento_id: null });
+      c.pago = false;
+      c.data_pagamento = null;
+      c.lancamento_id = null;
+      toast('↩ Pagamento desfeito e lançamento removido');
+    }
+
+    setSaving('ok');
+    renderContas();
+    renderMovimentos();
   } catch(e) { setSaving('err'); toast('Erro: '+e.message, false); }
+}
+
+function openPagamentoModal(id) {
+  const c = DB.contas.find(c=>c.id===id);
+  document.getElementById('pag_id').value = id;
+  document.getElementById('pag_data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('pag_desc_label').textContent = c ? c.desc : '';
+  document.getElementById('pag_valor_label').textContent = c ? fmt(Number(c.valor)) : '';
+  document.getElementById('modal-pagamento').classList.remove('hidden');
+  return new Promise(resolve => {
+    window._pagResolve = resolve;
+  });
+}
+
+function confirmarPagamento() {
+  document.getElementById('modal-pagamento').classList.add('hidden');
+  if (window._pagResolve) { window._pagResolve(true); window._pagResolve = null; }
+}
+
+function cancelarPagamento() {
+  document.getElementById('modal-pagamento').classList.add('hidden');
+  if (window._pagResolve) { window._pagResolve(false); window._pagResolve = null; }
 }
 
 async function delConta(id) {
@@ -1382,25 +2132,160 @@ function statusBadge(c) {
   const [cls,lbl]=m[s].split(' '); return `<span class="badge ${cls}">${lbl}</span>`;
 }
 
+function contaTipoBadge(c) {
+  if (c.parcela_total > 1) {
+    return `<span class="badge-parcela">🔢 ${c.parcela_num}/${c.parcela_total}</span>`;
+  }
+  return '';
+}
+
 function renderContas() {
   const fstatus = document.getElementById('cf_status').value;
   const search  = document.getElementById('cf_search').value.toLowerCase();
-  const now = new Date();
+
   function applyF(list) {
-    return list.filter(c=>{
-      const st=getStatus(c);
-      if(fstatus&&fstatus!==st) return false;
-      if(search&&!c.desc.toLowerCase().includes(search)) return false;
+    return list.filter(c => {
+      const st = getStatus(c);
+      if (fstatus && fstatus !== st) return false;
+      if (search && !c.desc.toLowerCase().includes(search)) return false;
       return true;
     });
   }
-  const rowHTML = c => `<tr><td style="${c.pago?'text-decoration:line-through;color:var(--hint)':''}">${c.desc}</td><td style="color:${getStatus(c)==='vencida'?'var(--red)':'inherit'}">${fmtD(c.venc)}</td><td class="td-num">${fmt(Number(c.valor))}</td><td class="status-toggle" onclick="togglePago('${c.id}')" title="Clique para marcar">${statusBadge(c)}</td><td><button class="btn-icon" onclick="delConta('${c.id}')">✕</button></td></tr>`;
-  const empty = '<tr class="empty-row"><td colspan="5">Nenhum resultado</td></tr>';
-  const pagar   = applyF(DB.contas.filter(c=>c.tipo==='pagar')).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
-  const receber = applyF(DB.contas.filter(c=>c.tipo==='receber')).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
-  document.getElementById('ct-pagar').innerHTML   = pagar.length   ? pagar.map(rowHTML).join('')   : empty;
-  document.getElementById('ct-receber').innerHTML = receber.length ? receber.map(rowHTML).join('') : empty;
+
+  // Row for "A pagar" and "A receber" (pendente/vencida)
+  const rowPending = c => {
+    const st = getStatus(c);
+    const tipoBadge = contaTipoBadge(c);
+    return `<tr>
+      <td>
+        <div style="font-weight:500;font-size:13px">${c.desc}</div>
+        ${tipoBadge ? `<div style="margin-top:2px">${tipoBadge}</div>` : ''}
+        ${st==='vencida' ? `<div style="font-size:10px;color:var(--red);margin-top:2px">⚠ Vencida</div>` : ''}
+      </td>
+      <td style="color:${st==='vencida'?'var(--red)':'var(--muted)'};font-size:12px">${fmtD(c.venc)}</td>
+      <td class="td-num" style="color:${c.tipo==='receber'?'var(--green)':'var(--red)'}">${fmt(Number(c.valor))}</td>
+      <td>
+        <div class="dropdown" id="dd-${c.id}">
+          <button class="btn-dots" onclick="toggleDropdown('${c.id}',event)" title="Opções">···</button>
+          <div class="dropdown-menu" id="ddm-${c.id}">
+            <button class="dropdown-item success" onclick="closeAllDropdowns();togglePago('${c.id}')">✓ Pagar conta</button>
+            <button class="dropdown-item" onclick="closeAllDropdowns();openEditModal('${c.id}')">✏️ Alterar</button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item danger" onclick="closeAllDropdowns();delConta('${c.id}')">✕ Excluir</button>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  };
+
+  // Row for "Pagos"
+  const rowPaid = c => {
+    const tipoBadge = contaTipoBadge(c);
+    const dpago = c.data_pagamento ? fmtD(c.data_pagamento) : '—';
+    const early = c.data_pagamento && c.venc && c.data_pagamento < c.venc;
+    const late  = c.data_pagamento && c.venc && c.data_pagamento > c.venc;
+    const dpClass = early ? 'color:var(--green)' : late ? 'color:var(--amber)' : 'color:var(--hint)';
+    const dpIcon  = early ? ' ✓' : late ? ' ⚠' : '';
+    return `<tr>
+      <td>
+        <div style="font-weight:500;font-size:13px;text-decoration:line-through;color:var(--hint)">${c.desc}</div>
+        ${tipoBadge ? `<div style="margin-top:2px">${tipoBadge}</div>` : ''}
+      </td>
+      <td style="color:var(--hint);font-size:12px">${fmtD(c.venc)}</td>
+      <td style="font-size:12px;${dpClass}">${dpago}${dpIcon}</td>
+      <td class="td-num" style="color:var(--hint)">${fmt(Number(c.valor))}</td>
+      <td>
+        <div class="dropdown" id="dd-${c.id}">
+          <button class="btn-dots" onclick="toggleDropdown('${c.id}',event)" title="Opções">···</button>
+          <div class="dropdown-menu" id="ddm-${c.id}">
+            <button class="dropdown-item" onclick="closeAllDropdowns();togglePago('${c.id}')">↩ Desfazer pagamento</button>
+            <button class="dropdown-item" onclick="closeAllDropdowns();openEditModal('${c.id}')">✏️ Alterar</button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item danger" onclick="closeAllDropdowns();delConta('${c.id}')">✕ Excluir</button>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  };
+
+  const emptyPend  = '<tr class="empty-row"><td colspan="4" style="padding:28px;text-align:center;color:var(--hint)">Nenhuma pendente</td></tr>';
+  const emptyPagos = '<tr class="empty-row"><td colspan="5" style="padding:28px;text-align:center;color:var(--hint)">Nenhum pagamento</td></tr>';
+  const emptyRec   = '<tr class="empty-row"><td colspan="4" style="padding:28px;text-align:center;color:var(--hint)">Nenhuma a receber</td></tr>';
+
+  // A pagar — pendentes e vencidas (não pagas, tipo pagar)
+  const pagar = applyF(
+    DB.contas.filter(c => c.tipo === 'pagar' && !c.pago)
+  ).sort((a,b) => new Date(a.venc) - new Date(b.venc));
+
+  // Pagos — tipo pagar que já foram pagos
+  const pagos = applyF(
+    DB.contas.filter(c => c.tipo === 'pagar' && c.pago)
+  ).sort((a,b) => new Date(b.venc) - new Date(a.venc));
+
+  // A receber — tipo receber
+  const receber = applyF(
+    DB.contas.filter(c => c.tipo === 'receber')
+  ).sort((a,b) => new Date(a.venc) - new Date(b.venc));
+
+  document.getElementById('ct-pagar').innerHTML   = pagar.length   ? pagar.map(rowPending).join('')  : emptyPend;
+  document.getElementById('ct-pagos').innerHTML   = pagos.length   ? pagos.map(rowPaid).join('')     : emptyPagos;
+  document.getElementById('ct-receber').innerHTML = receber.length ? receber.map(rowPending).join('') : emptyRec;
+
+  // counters
+  const fmtCount = (n, total) => n === total ? `${n}` : `${n} / ${total}`;
+  document.getElementById('ct-pagar-count').textContent   = `${pagar.length} pendente${pagar.length!==1?'s':''}`;
+  document.getElementById('ct-pagos-count').textContent   = `${pagos.length} pago${pagos.length!==1?'s':''}`;
+  document.getElementById('ct-receber-count').textContent = `${receber.length} item${receber.length!==1?'s':''}`;
 }
+
+// ── DROPDOWN HELPERS ──────────────────────────────────────────────────────
+function toggleDropdown(id, e) {
+  e.stopPropagation();
+  const menu = document.getElementById('ddm-' + id);
+  const isOpen = menu.classList.contains('open');
+  closeAllDropdowns();
+  if (!isOpen) menu.classList.add('open');
+}
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', closeAllDropdowns);
+
+// ── MODAL ALTERAR ──────────────────────────────────────────────────────────
+function openEditModal(id) {
+  const c = DB.contas.find(c => c.id === id); if (!c) return;
+  document.getElementById('edit_id').value    = id;
+  document.getElementById('edit_tipo').value  = c.tipo;
+  document.getElementById('edit_desc').value  = c.desc;
+  document.getElementById('edit_valor').value = Number(c.valor).toFixed(2);
+  document.getElementById('edit_venc').value  = c.venc;
+  document.getElementById('modal-conta').classList.remove('hidden');
+}
+function closeModal() {
+  document.getElementById('modal-conta').classList.add('hidden');
+}
+async function salvarEdicaoConta() {
+  const id    = document.getElementById('edit_id').value;
+  const tipo  = document.getElementById('edit_tipo').value;
+  const desc  = document.getElementById('edit_desc').value.trim();
+  const valor = parseFloat(document.getElementById('edit_valor').value);
+  const venc  = document.getElementById('edit_venc').value;
+  if (!desc || !venc || isNaN(valor) || valor <= 0) { toast('Preencha todos os campos', false); return; }
+  setSaving('saving');
+  try {
+    await sbUpdate('contas', id, { tipo, descricao: desc, valor, venc });
+    const c = DB.contas.find(c => c.id === id);
+    if (c) { c.tipo = tipo; c.desc = desc; c.descricao = desc; c.valor = valor; c.venc = venc; }
+    closeModal();
+    setSaving('ok'); toast('Conta atualizada ✓');
+    renderContas();
+  } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
+}
+// Fechar modal clicando no backdrop
+document.addEventListener('click', e => {
+  if (e.target.id === 'modal-conta') closeModal();
+  if (e.target.id === 'modal-pagamento') cancelarPagamento();
+});
 
 // ── CATEGORIAS ────────────────────────────────────────────────────────────
 async function addCategoria() {
