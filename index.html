@@ -651,6 +651,168 @@
     80%  { opacity: 1; }
     100% { transform: translateY(105vh) rotateZ(720deg) rotateX(360deg); opacity: 0; }
   }
+
+  /* ══════════════════════════════════════════
+     RESPONSIVE — MOBILE FIRST
+     ══════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* ── LAYOUT ── */
+    .shell { flex-direction: column; }
+
+    /* ── SIDEBAR → BOTTOM NAV ── */
+    .sidebar {
+      width: 100%;
+      min-height: unset;
+      height: auto;
+      position: fixed;
+      top: auto;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      border-right: none;
+      border-top: 1px solid var(--border);
+      flex-direction: column;
+      z-index: 20;
+    }
+
+    /* Logo + footer hidden on mobile */
+    .logo,
+    .sidebar-footer,
+    .user-chip,
+    .nav-section { display: none; }
+
+    .nav {
+      padding: 0;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      align-items: center;
+      width: 100%;
+    }
+
+    .nav-item {
+      flex-direction: column;
+      gap: 3px;
+      padding: 8px 4px;
+      font-size: 10px;
+      flex: 1;
+      justify-content: center;
+      align-items: center;
+      border-radius: 0;
+      box-shadow: none !important;
+    }
+    .nav-item.active {
+      box-shadow: inset 0 2px 0 var(--accent) !important;
+      border-radius: 0;
+    }
+    .nav-item svg { width: 20px; height: 20px; }
+
+    /* ── MAIN ── */
+    .main {
+      margin-left: 0;
+      padding: 16px 14px 80px; /* bottom padding for nav */
+      max-width: 100%;
+    }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .page-title { font-size: 18px; }
+
+    /* ── METRICS GRID ── */
+    .metrics {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .metric { padding: 12px; }
+    .metric-value { font-size: 14px; }
+
+    /* ── TWO / THREE COL → SINGLE ── */
+    .two-col,
+    .three-col { grid-template-columns: 1fr; gap: 10px; }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding: 12px;
+    }
+    .filter-spacer { display: none; }
+    .filter-bar .btn { width: 100%; justify-content: center; }
+
+    /* ── FORMS ── */
+    .form-grid-2,
+    .form-grid-3 { grid-template-columns: 1fr; }
+
+    /* ── TABLES ── */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 520px; }
+
+    /* ── CARD ── */
+    .card { padding: 14px; }
+
+    /* ── CHART ── */
+    .chart-box { height: 180px; }
+
+    /* ── MODAL ── */
+    .modal-box {
+      margin: 12px;
+      padding: 20px 16px;
+      max-width: calc(100vw - 24px);
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      bottom: 72px; /* above bottom nav */
+      right: 12px;
+      left: 12px;
+      text-align: center;
+    }
+
+    /* ── LOADING ── */
+    .loading-overlay { padding: 20px; }
+
+    /* ── LOGIN BOX ── */
+    .login-box {
+      padding: 28px 20px;
+      margin: 0 12px;
+    }
+
+    /* ── CONTA MODE TABS ── */
+    .conta-mode-tabs { flex-wrap: wrap; }
+
+    /* ── PARCELAS PREVIEW ── */
+    .parcelas-preview { padding: 10px; }
+
+    /* ── UPCOMING LIST ── */
+    .upcoming-item { flex-wrap: wrap; gap: 8px; }
+    .upcoming-val { width: 100%; text-align: left; }
+
+    /* ── DROPDOWN ── */
+    .dropdown-menu { right: 0; left: auto; min-width: 140px; }
+
+    /* ── REC METRICS ── */
+    #rec-metrics { grid-template-columns: repeat(2,1fr); }
+
+    /* ── HIDE non-essential table columns on very small screens ── */
+    @media (max-width: 420px) {
+      .hide-xs { display: none; }
+    }
+  }
+
+  /* ── TABLET (769px – 1024px) ── */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .sidebar { width: 180px; }
+    .main { margin-left: 180px; padding: 24px 20px 40px; }
+    .metrics { grid-template-columns: repeat(3, 1fr); }
+    .metric-value { font-size: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -777,6 +939,18 @@
       <button class="logout-btn" onclick="doLogout()" title="Sair">⎋</button>
     </div>
   </aside>
+
+  <!-- MOBILE TOP BAR -->
+  <div id="mobile-topbar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:15;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;align-items:center;justify-content:space-between;">
+    <div style="background:linear-gradient(135deg,var(--accent2),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:16px;font-weight:600;letter-spacing:-.3px">NexFlow</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--hint)">
+        <div class="save-dot" id="saveDot2" style="width:5px;height:5px;box-shadow:none"></div>
+        <span id="saveLabel2">Online</span>
+      </div>
+      <button onclick="doLogout()" style="background:none;border:none;cursor:pointer;color:var(--hint);font-size:16px;padding:2px 4px;">&#x238B;</button>
+    </div>
+  </div>
 
   <main class="main">
 
@@ -1562,12 +1736,34 @@ function toast(msg, ok=true) {
   setTimeout(() => el.classList.remove('show'), 2800);
 }
 function setSaving(state) {
-  const dot = document.getElementById('saveDot');
-  const lbl = document.getElementById('saveLabel');
-  if (state === 'saving') { dot.style.background = '#fbbf24'; dot.style.boxShadow = '0 0 6px #fbbf24'; lbl.textContent = 'Salvando...'; }
-  else if (state === 'ok')  { dot.style.background = '#10b981'; dot.style.boxShadow = '0 0 6px #10b981'; lbl.textContent = 'Salvo'; setTimeout(()=>lbl.textContent='Conectado',2000); }
-  else                      { dot.style.background = '#ef4444'; dot.style.boxShadow = '0 0 6px #ef4444'; lbl.textContent = 'Erro ao salvar'; }
+  const dots = [document.getElementById('saveDot'), document.getElementById('saveDot2')];
+  const lbls = [document.getElementById('saveLabel'), document.getElementById('saveLabel2')];
+  dots.forEach(dot => { if(!dot) return;
+    if (state==='saving') { dot.style.background='#fbbf24'; dot.style.boxShadow='0 0 6px #fbbf24'; }
+    else if (state==='ok') { dot.style.background='#10b981'; dot.style.boxShadow='0 0 6px #10b981'; }
+    else { dot.style.background='#ef4444'; dot.style.boxShadow='0 0 6px #ef4444'; }
+  });
+  const savingTxt = state==='saving'?'Salvando...': state==='ok'?'Salvo':'Erro';
+  lbls.forEach(lbl => { if(lbl) lbl.textContent = savingTxt; });
+  if (state==='ok') setTimeout(()=>lbls.forEach(l=>{ if(l) l.textContent='Online'; }), 2000);
 }
+
+// ── MOBILE TOPBAR VISIBILITY ───────────────────────────────────────────────
+function updateMobileUI() {
+  const tb = document.getElementById('mobile-topbar');
+  const main = document.querySelector('.main');
+  if (!tb) return;
+  if (window.innerWidth <= 768) {
+    tb.style.display = 'flex';
+    if (main) main.style.paddingTop = '56px';
+  } else {
+    tb.style.display = 'none';
+    if (main) main.style.paddingTop = '';
+  }
+}
+window.addEventListener('resize', updateMobileUI);
+document.addEventListener('DOMContentLoaded', updateMobileUI);
+setTimeout(updateMobileUI, 100);
 function showLoading(v) { document.getElementById('loading').style.display = v ? 'flex' : 'none'; }
 
 // ── RIPPLE ────────────────────────────────────────────────────────────────
