@@ -1294,57 +1294,58 @@
 </div>
 
 <script>
-// ── USUÁRIOS PADRÃO ──────────────────────────────────────────────────────
-const DEFAULT_USERS = [
-  { username: 'admin',      password: 'admin123', displayName: 'Administrador' },
-  { username: 'financeiro', password: 'fin2024',  displayName: 'Financeiro'   },
-];
-
-// ── HELPERS DE USUÁRIOS (localStorage) ───────────────────────────────────
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem('cx_users') || 'null') || DEFAULT_USERS; }
-  catch(e) { return DEFAULT_USERS; }
-}
-function saveUsers(users) {
-  localStorage.setItem('cx_users', JSON.stringify(users));
-}
-
 // ── AUTH ──────────────────────────────────────────────────────────────────
 let currentUser = null;
+
+// hash simples SHA-256 para não salvar senha em texto puro
+async function hashPassword(pass) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 
 function enterApp(user) {
   currentUser = user;
   sessionStorage.setItem('cx_user', JSON.stringify(user));
   document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('user-name-label').textContent = user.displayName;
-  document.getElementById('user-avatar').textContent = user.displayName.charAt(0).toUpperCase();
+  document.getElementById('user-name-label').textContent = user.display_name;
+  document.getElementById('user-avatar').textContent = user.display_name.charAt(0).toUpperCase();
   init();
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────
-function doLogin() {
-  const u    = document.getElementById('li_user').value.trim();
-  const p    = document.getElementById('li_pass').value;
-  const err  = document.getElementById('login-error');
-  const uEl  = document.getElementById('li_user');
-  const pEl  = document.getElementById('li_pass');
-  uEl.classList.remove('err'); pEl.classList.remove('err');
-  err.classList.remove('show');
+async function doLogin() {
+  const u   = document.getElementById('li_user').value.trim().toLowerCase();
+  const p   = document.getElementById('li_pass').value;
+  const err = document.getElementById('login-error');
+  const uEl = document.getElementById('li_user');
+  const pEl = document.getElementById('li_pass');
+  const btn = document.querySelector('#panel-login .login-btn');
+  uEl.classList.remove('err'); pEl.classList.remove('err'); err.classList.remove('show');
+
   if (!u || !p) {
     if (!u) uEl.classList.add('err');
     if (!p) pEl.classList.add('err');
-    err.textContent = 'Preencha usuário e senha.';
-    err.classList.add('show'); return;
+    err.textContent = 'Preencha usuário e senha.'; err.classList.add('show'); return;
   }
-  const users = getUsers();
-  const found = users.find(x => x.username === u && x.password === p);
-  if (!found) {
-    uEl.classList.add('err'); pEl.classList.add('err');
-    err.textContent = 'Usuário ou senha incorretos. Tente novamente.';
-    err.classList.add('show');
-    pEl.value = ''; pEl.focus(); return;
+
+  btn.disabled = true; btn.textContent = 'Entrando…';
+  try {
+    const hash = await hashPassword(p);
+    const res = await fetch(`${SB_URL}/rest/v1/usuarios?username=eq.${encodeURIComponent(u)}&password_hash=eq.${hash}&select=*`, {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    const rows = await res.json();
+    if (!rows || rows.length === 0) {
+      uEl.classList.add('err'); pEl.classList.add('err');
+      err.textContent = 'Usuário ou senha incorretos. Tente novamente.'; err.classList.add('show');
+      pEl.value = ''; pEl.focus(); return;
+    }
+    enterApp(rows[0]);
+  } catch(e) {
+    err.textContent = 'Erro de conexão: ' + e.message; err.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Entrar';
   }
-  enterApp(found);
 }
 
 // ── CADASTRO ──────────────────────────────────────────────────────────────
@@ -1373,16 +1374,16 @@ function checkPassRules() {
   rLen.classList.toggle('ok', p.length >= 6);
   rNum.classList.toggle('ok', /\d/.test(p));
 }
-function doRegister() {
+async function doRegister() {
   const name  = document.getElementById('reg_name').value.trim();
   const user  = document.getElementById('reg_user').value.trim().toLowerCase().replace(/\s+/g,'');
   const pass  = document.getElementById('reg_pass').value;
   const pass2 = document.getElementById('reg_pass2').value;
   const err   = document.getElementById('reg-error');
+  const btn   = document.querySelector('#panel-register .login-btn');
   ['reg_name','reg_user','reg_pass','reg_pass2'].forEach(id => document.getElementById(id).classList.remove('err'));
   err.classList.remove('show');
 
-  // validações
   if (!name) {
     document.getElementById('reg_name').classList.add('err');
     err.textContent = 'Informe seu nome completo.'; err.classList.add('show'); return;
@@ -1394,11 +1395,6 @@ function doRegister() {
   if (!/^[a-z0-9_]+$/.test(user)) {
     document.getElementById('reg_user').classList.add('err');
     err.textContent = 'Use apenas letras, números e _ no usuário.'; err.classList.add('show'); return;
-  }
-  const users = getUsers();
-  if (users.find(x => x.username === user)) {
-    document.getElementById('reg_user').classList.add('err');
-    err.textContent = 'Este nome de usuário já está em uso.'; err.classList.add('show'); return;
   }
   if (pass.length < 6) {
     document.getElementById('reg_pass').classList.add('err');
@@ -1413,16 +1409,35 @@ function doRegister() {
     err.textContent = 'As senhas não coincidem.'; err.classList.add('show'); return;
   }
 
-  // salvar novo usuário
-  const newUser = { username: user, password: pass, displayName: name };
-  users.push(newUser);
-  saveUsers(users);
+  btn.disabled = true; btn.textContent = 'Criando…';
+  try {
+    // verificar se username já existe
+    const chk = await fetch(`${SB_URL}/rest/v1/usuarios?username=eq.${encodeURIComponent(user)}&select=id`, {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    const existing = await chk.json();
+    if (existing && existing.length > 0) {
+      document.getElementById('reg_user').classList.add('err');
+      err.textContent = 'Este nome de usuário já está em uso.'; err.classList.add('show'); return;
+    }
 
-  // voltar ao login com mensagem de sucesso
-  showLogin();
-  document.getElementById('li_user').value = user;
-  document.getElementById('login-success').classList.add('show');
-  setTimeout(() => document.getElementById('login-success').classList.remove('show'), 5000);
+    const hash = await hashPassword(pass);
+    const res = await fetch(`${SB_URL}/rest/v1/usuarios`, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify({ username: user, password_hash: hash, display_name: name })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || res.statusText); }
+
+    showLogin();
+    document.getElementById('li_user').value = user;
+    document.getElementById('login-success').classList.add('show');
+    setTimeout(() => document.getElementById('login-success').classList.remove('show'), 5000);
+  } catch(e) {
+    err.textContent = 'Erro ao criar conta: ' + e.message; err.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Criar conta';
+  }
 }
 
 // ── LOGOUT ────────────────────────────────────────────────────────────────
