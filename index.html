@@ -458,7 +458,50 @@
   }
   .logout-btn:hover { background: var(--red-bg); color: var(--red); transform: scale(1.1); }
 
-  /* ── RECORRENTES ── */
+  /* ── AUDITORIA ── */
+  .audit-action-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    font-weight: 600; letter-spacing: .3px; white-space: nowrap;
+  }
+  .audit-criar    { background: rgba(52,211,153,.12); color: #34d399; border: 1px solid rgba(52,211,153,.2); }
+  .audit-editar   { background: rgba(251,191,36,.1);  color: #fbbf24; border: 1px solid rgba(251,191,36,.2); }
+  .audit-excluir  { background: rgba(248,113,113,.1); color: #f87171; border: 1px solid rgba(248,113,113,.2); }
+  .audit-pagar    { background: rgba(124,111,234,.12);color: #9b8ff5; border: 1px solid rgba(124,111,234,.2); }
+  .audit-desfazer { background: rgba(96,165,250,.1);  color: #60a5fa; border: 1px solid rgba(96,165,250,.2); }
+
+  .audit-user-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500; color: var(--muted);
+  }
+  .audit-avatar {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #6257d4);
+    color: #fff; font-size: 9px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .audit-diff {
+    font-size: 11px; font-family: var(--mono);
+    background: var(--bg2); border: 1px solid var(--border-light);
+    border-radius: var(--radius-xs); padding: 8px 12px;
+    margin-top: 6px; display: none; max-width: 420px;
+    line-height: 1.7;
+  }
+  .audit-diff.open { display: block; }
+  .diff-old { color: var(--red);   text-decoration: line-through; }
+  .diff-new { color: var(--green); }
+  .diff-row { display: flex; gap: 8px; align-items: flex-start; }
+  .diff-field { color: var(--hint); min-width: 70px; flex-shrink: 0; }
+  .audit-toggle-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 11px; color: var(--hint); padding: 2px 6px;
+    border-radius: var(--radius-xs); transition: color .15s, background .15s;
+    margin-top: 2px;
+  }
+  .audit-toggle-btn:hover { color: var(--text); background: var(--border); }
+  .audit-empty { text-align: center; padding: 40px; color: var(--hint); font-size: 13px; }
+  .audit-entity { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .rec-freq-badge {
     display: inline-flex; align-items: center; gap: 5px;
     font-size: 10.5px; padding: 2px 8px; border-radius: 20px; font-weight: 500;
@@ -922,6 +965,11 @@
       <button class="nav-item" onclick="showPage('fornecedores')">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5"/><path d="M11 7.5c1.2.3 2.5 1.2 2.5 2.5"/><path d="M10.5 3.5a2.5 2.5 0 010 3"/></svg>
         Fornecedores
+      </button>
+      <div class="nav-section">Controle</div>
+      <button class="nav-item" onclick="showPage('auditoria')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v12H2z"/><path d="M5 6h6M5 8.5h4M5 11h3"/><circle cx="11.5" cy="10.5" r="2" stroke-width="1.5"/><path d="M13 12l1 1"/></svg>
+        Auditoria
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -1457,6 +1505,85 @@
       </div>
     </div>
 
+    <!-- AUDITORIA -->
+    <div id="p-auditoria" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Auditoria</div>
+          <div class="page-subtitle">Histórico completo de ações por usuário</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAuditoria()">↻ Atualizar</button>
+      </div>
+
+      <!-- Métricas -->
+      <div class="metrics" id="audit-metrics" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px"></div>
+
+      <!-- Filtros -->
+      <div class="filter-bar" style="margin-bottom:14px">
+        <div class="filter-group">
+          <span class="filter-label">Usuário</span>
+          <select id="af_user" onchange="renderAuditoria()" style="min-width:130px">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Ação</span>
+          <select id="af_acao" onchange="renderAuditoria()">
+            <option value="">Todas</option>
+            <option value="criou">Criou</option>
+            <option value="editou">Editou</option>
+            <option value="excluiu">Excluiu</option>
+            <option value="pagou">Pagou conta</option>
+            <option value="desfez">Desfez pagamento</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Entidade</span>
+          <select id="af_entidade" onchange="renderAuditoria()">
+            <option value="">Todas</option>
+            <option value="lancamentos">Lançamentos</option>
+            <option value="contas">Contas</option>
+            <option value="categorias">Categorias</option>
+            <option value="fornecedores">Fornecedores</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Período</span>
+          <select id="af_periodo" onchange="renderAuditoria()">
+            <option value="">Tudo</option>
+            <option value="hoje">Hoje</option>
+            <option value="semana">Últimos 7 dias</option>
+            <option value="mes">Este mês</option>
+          </select>
+        </div>
+        <div class="filter-spacer"></div>
+        <button class="btn btn-ghost btn-sm" onclick="exportAuditoria()">⬇ Exportar</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetFilter('auditoria')">Limpar</button>
+      </div>
+
+      <!-- Log table -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:14px 20px 0;display:flex;align-items:center;justify-content:space-between">
+          <div class="card-title" style="margin:0">Registro de ações</div>
+          <span id="audit-count" style="font-size:11px;color:var(--hint)"></span>
+        </div>
+        <div class="table-wrap" style="padding:0 0 4px">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:140px">Data / Hora</th>
+                <th style="width:140px">Usuário</th>
+                <th style="width:90px">Ação</th>
+                <th style="width:100px">Entidade</th>
+                <th>Detalhes</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -1809,10 +1936,11 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('p-' + id).classList.add('active');
-  const idx = ['dashboard','lancamentos','contas','movimentos','categorias','fornecedores'].indexOf(id);
+  const idx = ['dashboard','lancamentos','contas','movimentos','categorias','fornecedores','auditoria'].indexOf(id);
   document.querySelectorAll('.nav-item')[idx].classList.add('active');
   if (id === 'recorrentes') { syncRecCatSelect(); renderRecorrentes(); }
   if (id === 'movimentos')  { syncMvCatSelect(); renderMovimentos(); }
+  if (id === 'auditoria')   { loadAuditoria(); }
 }
 
 function resetFilter(s) {
@@ -1821,6 +1949,7 @@ function resetFilter(s) {
   if (s==='contas')      { document.getElementById('cf_status').value=''; document.getElementById('cf_search').value=''; renderContas(); }
   if (s==='movimentos')  { ['mv_tipo','mv_periodo','mv_cat','mv_ordem'].forEach(id=>document.getElementById(id).value=''); document.getElementById('mv_search').value=''; ['mv_custom_wrap','mv_custom_wrap2'].forEach(id=>document.getElementById(id).style.display='none'); renderMovimentos(); }
   if (s==='recorrentes') { ['rcf_tipo','rcf_freq','rcf_status'].forEach(id=>document.getElementById(id).value=''); renderRecorrentes(); }
+  if (s==='auditoria')   { ['af_user','af_acao','af_entidade','af_periodo'].forEach(id=>document.getElementById(id).value=''); renderAuditoria(); }
 }
 
 // ── CAT SYNC ──────────────────────────────────────────────────────────────
@@ -1926,8 +2055,10 @@ async function addLancamento() {
   setSaving('saving');
   try {
     const fornecedor_id = document.getElementById('l_fornecedor')?.value || null;
-    const rows = await sbInsert('lancamentos', {tipo, data, descricao:desc, cat, valor, fornecedor_id});
+    const usuario = currentUser?.display_name || '';
+    const rows = await sbInsert('lancamentos', {tipo, data, descricao:desc, cat, valor, fornecedor_id, criado_por: usuario});
     DB.lancamentos.unshift({...rows[0], desc: rows[0].descricao});
+    await registrarAudit('criou', 'lancamentos', rows[0].id, null, {tipo, data, descricao:desc, cat, valor});
     document.getElementById('l_desc').value = '';
     document.getElementById('l_valor').value = '';
     setSaving('ok'); toast('Lançamento adicionado');
@@ -1939,7 +2070,9 @@ async function delLancamento(id) {
   if (!confirm('Remover este lançamento?')) return;
   setSaving('saving');
   try {
+    const l = DB.lancamentos.find(x=>x.id===id);
     await sbDelete('lancamentos', id);
+    await registrarAudit('excluiu', 'lancamentos', id, l ? {tipo:l.tipo,data:l.data,descricao:l.desc,cat:l.cat,valor:l.valor} : null, null);
     DB.lancamentos = DB.lancamentos.filter(l=>l.id!==id);
     setSaving('ok'); toast('Lançamento removido');
     renderLancamentos();
@@ -2239,8 +2372,10 @@ async function addConta() {
   // ── modo SIMPLES (padrão) ─────────────────────────────────────────────
   setSaving('saving');
   try {
-    const rows = await sbInsert('contas', { tipo, descricao: desc, valor, venc, pago: false, fornecedor_id });
+    const usuario = currentUser?.display_name || '';
+    const rows = await sbInsert('contas', { tipo, descricao: desc, valor, venc, pago: false, fornecedor_id, criado_por: usuario });
     DB.contas.unshift({...rows[0], desc: rows[0].descricao});
+    await registrarAudit('criou', 'contas', rows[0].id, null, {tipo, descricao:desc, valor, venc});
     document.getElementById('c_desc').value = '';
     document.getElementById('c_valor').value = '';
     setSaving('ok'); toast('Conta adicionada');
@@ -2298,7 +2433,8 @@ async function togglePago(id) {
         descricao: c.desc,
         cat: c.cat || '',
         valor: c.valor,
-        origem_conta_id: c.id
+        origem_conta_id: c.id,
+        criado_por: currentUser?.display_name || ''
       });
       const novoLanc = { ...lancRows[0], desc: lancRows[0].descricao };
       DB.lancamentos.unshift(novoLanc);
@@ -2307,7 +2443,7 @@ async function togglePago(id) {
       c.pago = true;
       c.data_pagamento = dataPagamento;
       c.lancamento_id = novoLanc.id;
-
+      await registrarAudit('pagou', 'contas', id, {pago:false, descricao:c.desc}, {pago:true, data_pagamento:dataPagamento, valor:c.valor});
       launchConfetti();
       toast('💸 Conta paga e lançamento criado! ✓');
     } else {
@@ -2319,6 +2455,7 @@ async function togglePago(id) {
         } catch(e) { /* lançamento pode já ter sido removido manualmente */ }
       }
       await sbUpdate('contas', id, { pago: false, data_pagamento: null, lancamento_id: null });
+      await registrarAudit('desfez', 'contas', id, {pago:true, data_pagamento:c.data_pagamento, descricao:c.desc}, {pago:false});
       c.pago = false;
       c.data_pagamento = null;
       c.lancamento_id = null;
@@ -2357,7 +2494,9 @@ async function delConta(id) {
   if (!confirm('Remover esta conta?')) return;
   setSaving('saving');
   try {
+    const c = DB.contas.find(x=>x.id===id);
     await sbDelete('contas', id);
+    await registrarAudit('excluiu', 'contas', id, c ? {descricao:c.desc, valor:c.valor, tipo:c.tipo, venc:c.venc} : null, null);
     DB.contas = DB.contas.filter(c=>c.id!==id);
     setSaving('ok'); toast('Conta removida');
     renderContas();
@@ -2521,10 +2660,12 @@ async function salvarEdicaoConta() {
   setSaving('saving');
   try {
     const fid = document.getElementById('edit_fornecedor')?.value || null;
-    await sbUpdate('contas', id, { tipo, descricao: desc, valor, venc, fornecedor_id: fid });
-    c.fornecedor_id = fid;
     const c = DB.contas.find(c => c.id === id);
-    if (c) { c.tipo = tipo; c.desc = desc; c.descricao = desc; c.valor = valor; c.venc = venc; }
+    const antes = c ? {tipo:c.tipo, descricao:c.desc, valor:Number(c.valor), venc:c.venc} : null;
+    const usuario = currentUser?.display_name || '';
+    await sbUpdate('contas', id, { tipo, descricao: desc, valor, venc, fornecedor_id: fid, editado_por: usuario, editado_em: new Date().toISOString() });
+    await registrarAudit('editou', 'contas', id, antes, {tipo, descricao:desc, valor, venc});
+    if (c) { c.tipo = tipo; c.desc = desc; c.descricao = desc; c.valor = valor; c.venc = venc; c.fornecedor_id = fid; }
     closeModal();
     setSaving('ok'); toast('Conta atualizada ✓');
     renderContas();
@@ -2565,6 +2706,7 @@ async function addFornecedor() {
   try {
     const rows = await sbInsert('fornecedores', {nome, tipo, doc, contato, obs});
     DB.fornecedores.push(rows[0]);
+    await registrarAudit('criou', 'fornecedores', rows[0].id, null, {nome, tipo});
     ['forn_nome','forn_doc','forn_contato','forn_obs'].forEach(id=>document.getElementById(id).value='');
     syncFornSelect();
     renderFornecedores();
@@ -2576,7 +2718,9 @@ async function delFornecedor(id) {
   if (!confirm('Remover este fornecedor?')) return;
   setSaving('saving');
   try {
+    const f = DB.fornecedores.find(x=>x.id===id);
     await sbDelete('fornecedores', id);
+    await registrarAudit('excluiu', 'fornecedores', id, f ? {nome:f.nome, tipo:f.tipo} : null, null);
     DB.fornecedores = DB.fornecedores.filter(f=>f.id!==id);
     syncFornSelect();
     renderFornecedores();
@@ -2608,6 +2752,7 @@ async function addCategoria() {
   try {
     const rows = await sbInsert('categorias', {nome, tipo, budget});
     DB.categorias.push(rows[0]);
+    await registrarAudit('criou', 'categorias', rows[0].id, null, {nome, tipo, budget});
     document.getElementById('cat_nome').value='';
     document.getElementById('cat_budget').value='';
     setSaving('ok'); toast('Categoria adicionada');
@@ -2621,7 +2766,9 @@ async function delCategoria(id) {
   if (!confirm('Remover esta categoria?')) return;
   setSaving('saving');
   try {
+    const cat = DB.categorias.find(x=>x.id===id);
     await sbDelete('categorias', id);
+    await registrarAudit('excluiu', 'categorias', id, cat ? {nome:cat.nome, tipo:cat.tipo} : null, null);
     DB.categorias = DB.categorias.filter(c=>c.id!==id);
     setSaving('ok'); toast('Categoria removida');
     renderCategorias(); updateCatSelect(); syncCatDropdowns();
@@ -2821,6 +2968,216 @@ function renderRecorrentes() {
       }).join('')
     : '<tr class="empty-row"><td colspan="7">Nenhuma recorrente cadastrada</td></tr>';
 }
+// ── AUDITORIA ──────────────────────────────────────────────────────────────
+let AUDIT_LOG = [];
+
+const AUDIT_ACAO_LABELS = {
+  criou:'Criou', editou:'Editou', excluiu:'Excluiu',
+  pagou:'Pagou conta', desfez:'Desfez pagamento'
+};
+const AUDIT_ENTIDADE_LABELS = {
+  lancamentos:'Lançamento', contas:'Conta',
+  categorias:'Categoria', fornecedores:'Fornecedor'
+};
+
+// Monta o objeto dados combinando antes+depois e manda para audit_log
+async function registrarAudit(acao, tabela, registro_id, dados_antes, dados_depois) {
+  if (!currentUser) return;
+  const usuario = currentUser.display_name || currentUser.username || 'desconhecido';
+
+  // dados = { antes: {...}, depois: {...} } — só inclui o que existir
+  const dados = {};
+  if (dados_antes  != null) dados.antes  = dados_antes;
+  if (dados_depois != null) dados.depois = dados_depois;
+
+  const registro = {
+    tabela,
+    registro_id: String(registro_id),
+    acao,       // 'criou' | 'editou' | 'excluiu' | 'pagou' | 'desfez'
+    usuario,
+    dados,      // jsonb
+    criado_em:  new Date().toISOString()
+  };
+
+  // Salvar no Supabase
+  try {
+    const rows = await sbInsert('audit_log', registro);
+    const saved = { ...registro, id: rows[0]?.id || ('local_' + Date.now()) };
+    AUDIT_LOG.unshift(saved);
+  } catch(e) {
+    // Fallback localStorage se tabela ainda não existir
+    console.warn('audit_log insert failed:', e.message);
+    const saved = { ...registro, id: 'local_' + Date.now() };
+    AUDIT_LOG.unshift(saved);
+    const local = JSON.parse(localStorage.getItem('cx_audit_local') || '[]');
+    local.unshift(saved);
+    localStorage.setItem('cx_audit_local', JSON.stringify(local.slice(0, 500)));
+  }
+}
+
+async function loadAuditoria() {
+  try {
+    // Busca os 500 mais recentes ordenados por criado_em desc
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/audit_log?order=criado_em.desc&limit=500`,
+      { headers: H }
+    );
+    if (!r.ok) throw new Error(await r.text());
+    const rows = await r.json();
+    AUDIT_LOG = rows.map(r => ({
+      ...r,
+      // dados pode vir como objeto ou string JSON
+      dados: typeof r.dados === 'string' ? JSON.parse(r.dados) : (r.dados || {})
+    }));
+  } catch(e) {
+    console.warn('Não foi possível carregar audit_log do Supabase:', e.message);
+    // Usar o que está em cache + localStorage
+    const local = JSON.parse(localStorage.getItem('cx_audit_local') || '[]');
+    const merged = [...AUDIT_LOG, ...local];
+    const seen = new Set();
+    AUDIT_LOG = merged.filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; });
+  }
+  renderAuditoria();
+}
+
+function renderAuditoria() {
+  const fuser     = document.getElementById('af_user')?.value     || '';
+  const facao     = document.getElementById('af_acao')?.value     || '';
+  const fentidade = document.getElementById('af_entidade')?.value || '';
+  const fperiodo  = document.getElementById('af_periodo')?.value  || '';
+
+  const now = new Date();
+  const filtered = AUDIT_LOG.filter(r => {
+    if (fuser     && r.usuario  !== fuser)     return false;
+    if (facao     && r.acao     !== facao)     return false;
+    if (fentidade && r.tabela   !== fentidade) return false;
+    if (fperiodo) {
+      const d = new Date(r.criado_em);
+      if (fperiodo === 'hoje') {
+        if (d.toDateString() !== now.toDateString()) return false;
+      } else if (fperiodo === 'semana') {
+        const s = new Date(now); s.setDate(s.getDate() - 6); s.setHours(0,0,0,0);
+        if (d < s) return false;
+      } else if (fperiodo === 'mes') {
+        if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+    return true;
+  });
+
+  // Popular select de usuários dinamicamente
+  const users = [...new Set(AUDIT_LOG.map(r => r.usuario).filter(Boolean))].sort();
+  const afUser = document.getElementById('af_user');
+  if (afUser) {
+    const cur = afUser.value;
+    afUser.innerHTML = '<option value="">Todos</option>' + users.map(u => `<option value="${u}">${u}</option>`).join('');
+    afUser.value = cur;
+  }
+
+  // Métricas
+  const totalHoje  = AUDIT_LOG.filter(r => new Date(r.criado_em).toDateString() === now.toDateString()).length;
+  const totalCriou = filtered.filter(r => r.acao === 'criou').length;
+  const totalExcl  = filtered.filter(r => r.acao === 'excluiu').length;
+  const usersAtivos = new Set(filtered.map(r => r.usuario)).size;
+  document.getElementById('audit-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total de ações</div><div class="metric-value">${filtered.length}</div></div>
+    <div class="metric"><div class="metric-label">Ações hoje</div><div class="metric-value">${totalHoje}</div></div>
+    <div class="metric"><div class="metric-label">Usuários ativos</div><div class="metric-value">${usersAtivos}</div></div>
+    <div class="metric"><div class="metric-label">Exclusões</div><div class="metric-value ${totalExcl>0?'neg':''}">${totalExcl}</div></div>`;
+
+  document.getElementById('audit-count').textContent = `${filtered.length} registro(s)`;
+
+  if (!filtered.length) {
+    document.getElementById('audit-table').innerHTML =
+      '<tr><td colspan="5" class="audit-empty">Nenhuma ação registrada ainda. As ações serão salvas aqui automaticamente.</td></tr>';
+    return;
+  }
+
+  const acaoCls = {
+    criou:'audit-criar', editou:'audit-editar', excluiu:'audit-excluir',
+    pagou:'audit-pagar', desfez:'audit-desfazer'
+  };
+
+  document.getElementById('audit-table').innerHTML = filtered.map((r, i) => {
+    const dt    = new Date(r.criado_em);
+    const dtStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const inicial = (r.usuario || '?').charAt(0).toUpperCase();
+    const dados = typeof r.dados === 'string' ? JSON.parse(r.dados || '{}') : (r.dados || {});
+    const antes  = dados.antes  || {};
+    const depois = dados.depois || {};
+
+    // Diff visual
+    let diffHtml = '';
+    const todosOsCampos = new Set([...Object.keys(antes), ...Object.keys(depois)]);
+    const diffRows = [];
+    todosOsCampos.forEach(campo => {
+      const a = antes[campo], d = depois[campo];
+      if (JSON.stringify(a) === JSON.stringify(d)) return;
+      const fmtV = v => (v === null || v === undefined) ? '—' : String(v);
+      if (a !== undefined && d !== undefined) {
+        diffRows.push(`<div class="diff-row"><span class="diff-field">${campo}:</span><span class="diff-old">${fmtV(a)}</span><span style="color:var(--hint);margin:0 6px">→</span><span class="diff-new">${fmtV(d)}</span></div>`);
+      } else if (d !== undefined) {
+        diffRows.push(`<div class="diff-row"><span class="diff-field">${campo}:</span><span class="diff-new">${fmtV(d)}</span></div>`);
+      } else {
+        diffRows.push(`<div class="diff-row"><span class="diff-field">${campo}:</span><span class="diff-old">${fmtV(a)}</span></div>`);
+      }
+    });
+    if (diffRows.length) {
+      diffHtml = `<button class="audit-toggle-btn" onclick="toggleDiff('diff-${i}')">▶ ver alterações</button>
+        <div class="audit-diff" id="diff-${i}">${diffRows.join('')}</div>`;
+    }
+
+    // Resumo legível
+    const src = Object.keys(depois).length ? depois : antes;
+    let resumo = src.descricao || src.nome || src.desc || '';
+    if (src.valor) resumo += (resumo ? ' · ' : '') + fmt(Number(src.valor));
+    if (!resumo) resumo = `ID ${r.registro_id?.slice(0,8) || '—'}`;
+
+    return `<tr>
+      <td style="font-size:11.5px;color:var(--muted);white-space:nowrap">${dtStr}</td>
+      <td>
+        <div class="audit-user-chip">
+          <div class="audit-avatar">${inicial}</div>
+          <span>${r.usuario || '—'}</span>
+        </div>
+      </td>
+      <td><span class="audit-action-badge ${acaoCls[r.acao]||''}">${AUDIT_ACAO_LABELS[r.acao]||r.acao}</span></td>
+      <td><span style="font-size:12px;color:var(--muted)">${AUDIT_ENTIDADE_LABELS[r.tabela]||r.tabela||'—'}</span></td>
+      <td>
+        <div style="font-size:13px;font-weight:500">${resumo}</div>
+        ${diffHtml}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleDiff(id) {
+  const el = document.getElementById(id); if (!el) return;
+  const btn = el.previousElementSibling;
+  el.classList.toggle('open');
+  if (btn) btn.textContent = el.classList.contains('open') ? '▼ ocultar alterações' : '▶ ver alterações';
+}
+
+function exportAuditoria() {
+  if (!AUDIT_LOG.length) { toast('Nenhum registro para exportar', false); return; }
+  const rows = AUDIT_LOG.map(r => {
+    const dados = typeof r.dados === 'string' ? JSON.parse(r.dados||'{}') : (r.dados||{});
+    return {
+      'Data/Hora':   new Date(r.criado_em).toLocaleString('pt-BR'),
+      'Usuário':     r.usuario || '',
+      'Ação':        AUDIT_ACAO_LABELS[r.acao] || r.acao,
+      'Tabela':      AUDIT_ENTIDADE_LABELS[r.tabela] || r.tabela,
+      'ID Registro': r.registro_id || '',
+      'Antes':       JSON.stringify(dados.antes || {}),
+      'Depois':      JSON.stringify(dados.depois || {})
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [18,16,14,14,14,45,45].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Auditoria');
+  const stamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, `auditoria_${stamp}.xlsx`);
+  toast(`${rows.length} registros exportados ✓`);
+}
 </script>
-</body>
-</html>
