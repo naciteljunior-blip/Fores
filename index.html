@@ -2051,16 +2051,25 @@ function renderDashboard() {
   const entradas = filtered.filter(l=>l.tipo==='entrada').reduce((s,l)=>s+Number(l.valor),0);
   const saidas   = filtered.filter(l=>l.tipo==='saida').reduce((s,l)=>s+Number(l.valor),0);
   const saldo    = entradas - saidas;
-  const tPagar   = DB.contas.filter(c=>c.tipo==='pagar'&&!c.pago).reduce((s,c)=>s+Number(c.valor),0);
-  const tReceber = DB.contas.filter(c=>c.tipo==='receber'&&!c.pago).reduce((s,c)=>s+Number(c.valor),0);
+
+  // A pagar / A receber: filtra pelo vencimento dentro do período selecionado
+  const range = getRange(periodo);
+  const contaNoperiodo = c => {
+    if (!range) return true;
+    const d = new Date(c.venc + 'T12:00:00');
+    return d >= range.s && d <= range.e;
+  };
+  const tPagar   = DB.contas.filter(c=>c.tipo==='pagar'  && !c.pago && contaNoperiodo(c)).reduce((s,c)=>s+Number(c.valor),0);
+  const tReceber = DB.contas.filter(c=>c.tipo==='receber' && !c.pago && contaNoperiodo(c)).reduce((s,c)=>s+Number(c.valor),0);
   const labels   = {mes:'este mês',trim:'últimos 3 meses',semestre:'últimos 6 meses',ano:'este ano'};
   document.getElementById('dash-subtitle').textContent = `Exibindo ${labels[periodo]||''}${cat?' · '+cat:''}`;
+  const periodoLabel = {mes:'no mês',trim:'no trim.',semestre:'no sem.',ano:'no ano'}[periodo] || '';
   document.getElementById('dash-metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">Entradas</div><div class="metric-value pos">${fmt(entradas)}</div></div>
-    <div class="metric"><div class="metric-label">Saídas</div><div class="metric-value neg">${fmt(saidas)}</div></div>
-    <div class="metric"><div class="metric-label">Saldo</div><div class="metric-value ${saldo>=0?'pos':'neg'}">${fmt(saldo)}</div></div>
-    <div class="metric"><div class="metric-label">A pagar</div><div class="metric-value neg">${fmt(tPagar)}</div></div>
-    <div class="metric"><div class="metric-label">A receber</div><div class="metric-value pos">${fmt(tReceber)}</div></div>`;
+    <div class="metric"><div class="metric-label">Entradas ${periodoLabel}</div><div class="metric-value pos">${fmt(entradas)}</div></div>
+    <div class="metric"><div class="metric-label">Saídas ${periodoLabel}</div><div class="metric-value neg">${fmt(saidas)}</div></div>
+    <div class="metric"><div class="metric-label">Saldo ${periodoLabel}</div><div class="metric-value ${saldo>=0?'pos':'neg'}">${fmt(saldo)}</div></div>
+    <div class="metric"><div class="metric-label">A pagar ${periodoLabel}</div><div class="metric-value neg">${fmt(tPagar)}</div></div>
+    <div class="metric"><div class="metric-label">A receber ${periodoLabel}</div><div class="metric-value pos">${fmt(tReceber)}</div></div>`;
   // flow chart
   const now = new Date();
   const mNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
