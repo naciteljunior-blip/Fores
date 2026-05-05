@@ -1774,24 +1774,6 @@ function getMvFiltered() {
       if (ate && d > new Date(ate + 'T23:59:59')) return false;
     }
     return true;
-  }).sort((a,b) => {
-    const ordem = document.getElementById('mv_ordem')?.value || 'data_desc';
-    if (ordem === 'data_desc') {
-      const ta = a.created_at || a.data; const tb = b.created_at || b.data;
-      return new Date(tb) - new Date(ta);
-    } else if (ordem === 'data_asc') {
-      const ta = a.created_at || a.data; const tb = b.created_at || b.data;
-      return new Date(ta) - new Date(tb);
-    } else if (ordem === 'valor_desc') {
-      return Number(b.valor) - Number(a.valor);
-    } else if (ordem === 'valor_asc') {
-      return Number(a.valor) - Number(b.valor);
-    } else if (ordem === 'desc_az') {
-      return (a.desc||'').localeCompare(b.desc||'', 'pt-BR');
-    } else if (ordem === 'desc_za') {
-      return (b.desc||'').localeCompare(a.desc||'', 'pt-BR');
-    }
-    return 0;
   });
 }
 
@@ -1843,23 +1825,20 @@ function renderMovimentos() {
     return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   };
 
-  // sempre agrupa por data — dias do mais recente para o mais antigo
-  // exceto data_asc que inverte a ordem dos dias
-  const groups = {};
-  filtered.forEach(l => { if (!groups[l.data]) groups[l.data] = []; groups[l.data].push(l); });
-  const sortedDates = Object.keys(groups).sort((a,b) =>
-    ordem === 'data_asc' ? new Date(a) - new Date(b) : new Date(b) - new Date(a)
-  );
+  // ordenar lista inteira primeiro
+  let sorted = [...filtered];
+  if      (ordem === 'data_desc')  sorted.sort((a,b) => new Date(b.created_at||b.data) - new Date(a.created_at||a.data));
+  else if (ordem === 'data_asc')   sorted.sort((a,b) => new Date(a.created_at||a.data) - new Date(b.created_at||b.data));
+  else if (ordem === 'valor_desc') sorted.sort((a,b) => Number(b.valor) - Number(a.valor));
+  else if (ordem === 'valor_asc')  sorted.sort((a,b) => Number(a.valor) - Number(b.valor));
+  else if (ordem === 'desc_az')    sorted.sort((a,b) => (a.desc||'').localeCompare(b.desc||'','pt-BR'));
+  else if (ordem === 'desc_za')    sorted.sort((a,b) => (b.desc||'').localeCompare(a.desc||'','pt-BR'));
 
-  feed.innerHTML = sortedDates.map(date => {
-    let items = [...groups[date]];
-    // ordenar itens dentro do grupo conforme critério
-    if      (ordem === 'data_desc') items.sort((a,b) => new Date(b.created_at||b.data) - new Date(a.created_at||a.data));
-    else if (ordem === 'data_asc')  items.sort((a,b) => new Date(a.created_at||a.data) - new Date(b.created_at||b.data));
-    else if (ordem === 'valor_desc') items.sort((a,b) => Number(b.valor) - Number(a.valor));
-    else if (ordem === 'valor_asc')  items.sort((a,b) => Number(a.valor) - Number(b.valor));
-    else if (ordem === 'desc_az')    items.sort((a,b) => (a.desc||'').localeCompare(b.desc||'','pt-BR'));
-    else if (ordem === 'desc_za')    items.sort((a,b) => (b.desc||'').localeCompare(a.desc||'','pt-BR'));
+  // agrupar mantendo a ordem — usar Map para preservar a sequência
+  const groupMap = new Map();
+  sorted.forEach(l => { if (!groupMap.has(l.data)) groupMap.set(l.data, []); groupMap.get(l.data).push(l); });
+
+  feed.innerHTML = [...groupMap.entries()].map(([date, items]) => {
 
     const dayEnt = items.filter(l=>l.tipo==='entrada').reduce((s,l)=>s+Number(l.valor),0);
     const daySai = items.filter(l=>l.tipo==='saida').reduce((s,l)=>s+Number(l.valor),0);
