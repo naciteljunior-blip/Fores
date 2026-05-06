@@ -2126,6 +2126,12 @@ async function init() {
   showLoading(false);
 }
 
+function renderAll() {
+  renderDashboard();
+  renderLancamentos();
+  renderContas();
+}
+
 // ── NAV ───────────────────────────────────────────────────────────────────
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2297,7 +2303,7 @@ async function addLancamento() {
     document.getElementById('l_desc').value = '';
     document.getElementById('l_valor').value = '';
     setSaving('ok'); toast('Lançamento adicionado');
-    renderLancamentos();
+    renderAll();
   } catch(e) { setSaving('err'); toast('Erro: '+e.message, false); }
 }
 
@@ -2310,7 +2316,7 @@ async function delLancamento(id) {
     await registrarAudit('excluiu', 'lancamentos', id, l ? {tipo:l.tipo,data:l.data,descricao:l.desc,cat:l.cat,valor:l.valor} : null, null);
     DB.lancamentos = DB.lancamentos.filter(l=>l.id!==id);
     setSaving('ok'); toast('Lançamento removido');
-    renderLancamentos();
+    renderAll();
   } catch(e) { setSaving('err'); toast('Erro: '+e.message, false); }
 }
 
@@ -2630,7 +2636,7 @@ async function addConta() {
       document.getElementById('rec-schedule-preview').style.display = 'none';
       setSaving('ok');
       toast(`♻️ ${qtd} vencimentos recorrentes criados! (${freqLabel})`);
-      renderContas();
+      renderAll();
     } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
     return;
   }
@@ -2655,7 +2661,7 @@ async function addConta() {
       document.getElementById('c_parcelas').value = '2';
       document.getElementById('parcelas-preview').style.display = 'none';
       setSaving('ok'); toast(`${n} parcelas criadas ✓`);
-      renderContas();
+      renderAll();
     } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
     return;
   }
@@ -2670,7 +2676,7 @@ async function addConta() {
     document.getElementById('c_desc').value = '';
     document.getElementById('c_valor').value = '';
     setSaving('ok'); toast('Conta adicionada');
-    renderContas();
+    renderAll();
   } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
 }
 
@@ -2754,7 +2760,7 @@ async function togglePago(id) {
     }
 
     setSaving('ok');
-    renderContas();
+    renderAll();
     renderMovimentos();
   } catch(e) { setSaving('err'); toast('Erro: '+e.message, false); }
 }
@@ -2790,7 +2796,7 @@ async function delConta(id) {
     await registrarAudit('excluiu', 'contas', id, c ? {descricao:c.desc, valor:c.valor, tipo:c.tipo, venc:c.venc} : null, null);
     DB.contas = DB.contas.filter(c=>c.id!==id);
     setSaving('ok'); toast('Conta removida');
-    renderContas();
+    renderAll();
   } catch(e) { setSaving('err'); toast('Erro: '+e.message, false); }
 }
 
@@ -2861,7 +2867,7 @@ async function bulkExcluir() {
     DB.contas = DB.contas.filter(c => !ids.includes(c.id));
     setSaving('ok');
     toast(`🗑 ${ids.length} conta(s) excluída(s)`);
-    renderContas();
+    renderAll();
   } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
 }
 
@@ -2886,7 +2892,7 @@ async function bulkBaixar() {
     setSaving('ok');
     launchConfetti();
     toast(`💸 ${aBaixar.length} conta(s) baixada(s)!`);
-    renderContas();
+    renderAll();
   } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
 }
 
@@ -3097,7 +3103,7 @@ async function salvarEdicaoConta() {
     if (c) { c.tipo = tipo; c.desc = desc; c.descricao = desc; c.valor = valor; c.venc = venc; c.cat = cat; c.fornecedor_id = fid; }
     closeModal();
     setSaving('ok'); toast('Conta atualizada ✓');
-    renderContas();
+    renderAll();
   } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
 }
 // Fechar modal clicando no backdrop
