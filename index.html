@@ -1170,12 +1170,13 @@
         <!-- Campos comuns -->
         <div class="form-grid-3">
           <div class="form-group"><label class="form-label">Tipo</label>
-            <select id="c_tipo"><option value="pagar">A pagar</option><option value="receber">A receber</option></select></div>
+            <select id="c_tipo" onchange="updateContaCatSelect()"><option value="pagar">A pagar</option><option value="receber">A receber</option></select></div>
           <div class="form-group"><label class="form-label">Descrição</label><input type="text" id="c_desc" placeholder="Ex: Aluguel maio"></div>
           <div class="form-group"><label class="form-label">Valor (R$)</label><input type="number" id="c_valor" placeholder="0,00" min="0" step="0.01" oninput="updateParcelasPreview();updateRecorrentePreview()"></div>
         </div>
-        <div class="form-grid-2">
+        <div class="form-grid-3">
           <div class="form-group"><label class="form-label">Primeiro vencimento</label><input type="date" id="c_venc" oninput="updateParcelasPreview();updateRecorrentePreview()"></div>
+          <div class="form-group"><label class="form-label">Categoria <span style="color:var(--hint);font-weight:400">(opcional)</span></label><select id="c_cat"><option value="">— Sem categoria —</option></select></div>
           <div class="form-group"><label class="form-label">Fornecedor / Cliente <span style="color:var(--hint);font-weight:400">(opcional)</span></label><select id="c_fornecedor"><option value="">— Nenhum —</option></select></div>
         </div>
         <div class="form-grid-2" style="margin-bottom:0">
@@ -1267,6 +1268,10 @@
           </select>
         </div>
         <div class="filter-group">
+          <span class="filter-label">Categoria</span>
+          <select id="cf_cat" onchange="renderContas()"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
           <span class="filter-label">Busca</span>
           <input type="text" id="cf_search" placeholder="Descrição..." oninput="renderContas()" style="min-width:130px">
         </div>
@@ -1283,8 +1288,7 @@
             <span id="ct-pagar-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
           </div>
           <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
-            <tbody id="ct-pagar"></tbody>
+            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:100px">Categoria</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
           </table></div>
         </div>
 
@@ -1296,7 +1300,7 @@
             <span id="ct-pagos-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
           </div>
           <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:90px">Dt. Pagamento</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
+            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:90px">Dt. Pagamento</th><th style="width:100px">Categoria</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
             <tbody id="ct-pagos"></tbody>
           </table></div>
         </div>
@@ -1309,7 +1313,7 @@
             <span id="ct-receber-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
           </div>
           <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
+            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:100px">Categoria</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
             <tbody id="ct-receber"></tbody>
           </table></div>
         </div>
@@ -1650,19 +1654,21 @@
     <input type="hidden" id="edit_id">
     <div class="form-grid-2" style="margin-bottom:12px">
       <div class="form-group"><label class="form-label">Tipo</label>
-        <select id="edit_tipo"><option value="pagar">A pagar</option><option value="receber">A receber</option></select></div>
+        <select id="edit_tipo" onchange="updateEditContaCatSelect()"><option value="pagar">A pagar</option><option value="receber">A receber</option></select></div>
       <div class="form-group"><label class="form-label">Descrição</label>
         <input type="text" id="edit_desc" placeholder="Descrição"></div>
     </div>
-    <div class="form-grid-2" style="margin-bottom:0">
+    <div class="form-grid-2" style="margin-bottom:12px">
       <div class="form-group"><label class="form-label">Valor (R$)</label>
         <input type="number" id="edit_valor" placeholder="0,00" min="0" step="0.01"></div>
       <div class="form-group"><label class="form-label">Vencimento</label>
         <input type="date" id="edit_venc"></div>
     </div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label class="form-label">Fornecedor / Cliente <span style="color:var(--hint);font-weight:400">(opcional)</span></label>
-      <select id="edit_fornecedor"><option value="">— Nenhum —</option></select>
+    <div class="form-grid-2" style="margin-bottom:12px">
+      <div class="form-group"><label class="form-label">Categoria <span style="color:var(--hint);font-weight:400">(opcional)</span></label>
+        <select id="edit_cat"><option value="">— Sem categoria —</option></select></div>
+      <div class="form-group"><label class="form-label">Fornecedor / Cliente <span style="color:var(--hint);font-weight:400">(opcional)</span></label>
+        <select id="edit_fornecedor"><option value="">— Nenhum —</option></select></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -1993,7 +1999,7 @@ async function init() {
     document.getElementById('l_data').value = today;
     document.getElementById('c_venc').value = today;
     document.getElementById('rc_prox').value = today;
-    syncCatDropdowns(); updateCatSelect();
+    syncCatDropdowns(); updateCatSelect(); updateContaCatSelect();
     renderDashboard(); renderLancamentos(); renderContas(); renderCategorias();
   } catch(e) {
     toast('Erro ao conectar: ' + e.message, false);
@@ -2016,7 +2022,7 @@ function showPage(id) {
 function resetFilter(s) {
   if (s==='dashboard')   { document.getElementById('d_periodo').value='mes'; document.getElementById('d_cat').value=''; renderDashboard(); }
   if (s==='lancamentos') { ['lf_periodo','lf_tipo','lf_cat'].forEach(id=>document.getElementById(id).value=''); document.getElementById('lf_search').value=''; renderLancamentos(); }
-  if (s==='contas')      { document.getElementById('cf_status').value=''; document.getElementById('cf_search').value=''; renderContas(); }
+  if (s==='contas')      { document.getElementById('cf_status').value=''; document.getElementById('cf_search').value=''; const cfCat=document.getElementById('cf_cat'); if(cfCat) cfCat.value=''; renderContas(); }
   if (s==='movimentos')  { ['mv_tipo','mv_periodo','mv_cat','mv_ordem'].forEach(id=>document.getElementById(id).value=''); document.getElementById('mv_search').value=''; ['mv_custom_wrap','mv_custom_wrap2'].forEach(id=>document.getElementById(id).style.display='none'); renderMovimentos(); }
   if (s==='recorrentes') { ['rcf_tipo','rcf_freq','rcf_status'].forEach(id=>document.getElementById(id).value=''); renderRecorrentes(); }
   if (s==='auditoria')   { ['af_user','af_acao','af_entidade','af_periodo'].forEach(id=>document.getElementById(id).value=''); renderAuditoria(); }
@@ -2030,6 +2036,31 @@ function syncCatDropdowns() {
     el.innerHTML = '<option value="">Todas</option>' + DB.categorias.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
     el.value = cur;
   });
+  // also sync contas cat filter
+  const cfCat = document.getElementById('cf_cat');
+  if (cfCat) {
+    const cur = cfCat.value;
+    cfCat.innerHTML = '<option value="">Todas</option>' + DB.categorias.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+    cfCat.value = cur;
+  }
+}
+
+function updateContaCatSelect() {
+  const tipo = document.getElementById('c_tipo')?.value;
+  const el   = document.getElementById('c_cat'); if (!el) return;
+  const cur  = el.value;
+  const cats = DB.categorias.filter(c => tipo === 'pagar' ? c.tipo === 'saida' : c.tipo === 'entrada');
+  el.innerHTML = '<option value="">— Sem categoria —</option>' + cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+  el.value = cats.find(c=>c.nome===cur) ? cur : '';
+}
+
+function updateEditContaCatSelect() {
+  const tipo = document.getElementById('edit_tipo')?.value;
+  const el   = document.getElementById('edit_cat'); if (!el) return;
+  const cur  = el.value;
+  const cats = DB.categorias.filter(c => tipo === 'pagar' ? c.tipo === 'saida' : c.tipo === 'entrada');
+  el.innerHTML = '<option value="">— Sem categoria —</option>' + cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+  el.value = cats.find(c=>c.nome===cur) ? cur : '';
 }
 function updateCatSelect() {
   const tipo = document.getElementById('l_tipo').value;
@@ -2441,6 +2472,7 @@ async function addConta() {
   const valor = parseFloat(document.getElementById('c_valor').value);
   const venc  = document.getElementById('c_venc').value;
   const fornecedor_id = document.getElementById('c_fornecedor')?.value || null;
+  const cat           = document.getElementById('c_cat')?.value || '';
   if (!desc || !venc || isNaN(valor) || valor <= 0) { toast('Preencha todos os campos', false); return; }
 
   // ── modo RECORRENTE: cria N contas agendadas automaticamente ─────────
@@ -2449,7 +2481,6 @@ async function addConta() {
     const qtd  = parseInt(document.getElementById('c_rec_qtd').value) || 12;
     const obs  = document.getElementById('c_obs_rec').value.trim();
     const dates = buildParcelaDates(venc, freq, qtd);
-    // Monta descrição com obs caso preenchido
     const descFull = obs ? `${desc} (${obs})` : desc;
     const freqLabel = {semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'}[freq] || freq;
     setSaving('saving');
@@ -2459,26 +2490,14 @@ async function addConta() {
       const inserts = await Promise.all(
         dates.map((d, i) =>
           sbInsert('contas', {
-            tipo,
-            descricao: descFull,
-            valor,
-            venc: d,
-            pago: false,
-            fornecedor_id,
-            parcela_grupo: grupo_id,
-            parcela_num: i + 1,
-            parcela_total: qtd,
+            tipo, descricao: descFull, valor, venc: d, pago: false,
+            cat, fornecedor_id,
+            parcela_grupo: grupo_id, parcela_num: i + 1, parcela_total: qtd,
             criado_por: usuario
           })
         )
       );
-      // Marcar localmente como recorrente para exibição
-      inserts.forEach(rows => DB.contas.unshift({
-        ...rows[0],
-        desc: rows[0].descricao,
-        recorrente: true,
-        recorrente_freq: freq
-      }));
+      inserts.forEach(rows => DB.contas.unshift({ ...rows[0], desc: rows[0].descricao, recorrente: true, recorrente_freq: freq }));
       await registrarAudit('criou', 'contas', grupo_id, null, { tipo, descricao: descFull, valor, freq: freqLabel, ocorrencias: qtd });
       document.getElementById('c_desc').value  = '';
       document.getElementById('c_valor').value = '';
@@ -2502,7 +2521,7 @@ async function addConta() {
     try {
       const inserts = await Promise.all(
         dates.map((d, i) =>
-          sbInsert('contas', { tipo, descricao: `${desc} (${i+1}/${n})`, valor: vp, venc: d, pago: false, parcela_grupo: desc, parcela_num: i+1, parcela_total: n, fornecedor_id })
+          sbInsert('contas', { tipo, descricao: `${desc} (${i+1}/${n})`, valor: vp, venc: d, pago: false, cat, parcela_grupo: desc, parcela_num: i+1, parcela_total: n, fornecedor_id })
         )
       );
       inserts.forEach(rows => DB.contas.unshift({...rows[0], desc: rows[0].descricao}));
@@ -2516,13 +2535,13 @@ async function addConta() {
     return;
   }
 
-  // ── modo SIMPLES (padrão) ─────────────────────────────────────────────
+  // ── modo SIMPLES ──────────────────────────────────────────────────────
   setSaving('saving');
   try {
     const usuario = currentUser?.display_name || '';
-    const rows = await sbInsert('contas', { tipo, descricao: desc, valor, venc, pago: false, fornecedor_id, criado_por: usuario });
+    const rows = await sbInsert('contas', { tipo, descricao: desc, valor, venc, pago: false, cat, fornecedor_id, criado_por: usuario });
     DB.contas.unshift({...rows[0], desc: rows[0].descricao});
-    await registrarAudit('criou', 'contas', rows[0].id, null, {tipo, descricao:desc, valor, venc});
+    await registrarAudit('criou', 'contas', rows[0].id, null, {tipo, descricao:desc, valor, venc, cat});
     document.getElementById('c_desc').value = '';
     document.getElementById('c_valor').value = '';
     setSaving('ok'); toast('Conta adicionada');
@@ -2671,16 +2690,25 @@ function contaTipoBadge(c) {
 
 function renderContas() {
   const fstatus = document.getElementById('cf_status').value;
+  const fcat    = document.getElementById('cf_cat')?.value || '';
   const search  = document.getElementById('cf_search').value.toLowerCase();
+
+  // sync cat select on every render
+  syncContaCatFilter();
 
   function applyF(list) {
     return list.filter(c => {
       const st = getStatus(c);
       if (fstatus && fstatus !== st) return false;
+      if (fcat   && c.cat !== fcat)  return false;
       if (search && !c.desc.toLowerCase().includes(search)) return false;
       return true;
     });
   }
+
+  const catBadge = cat => cat
+    ? `<span style="display:inline-flex;align-items:center;font-size:10px;padding:2px 7px;border-radius:20px;background:var(--accent-light);color:var(--accent2);border:1px solid rgba(124,111,234,.2);font-weight:500;white-space:nowrap">${cat}</span>`
+    : '<span style="color:var(--hint);font-size:11px">—</span>';
 
   // Row for "A pagar" and "A receber" (pendente/vencida)
   const rowPending = c => {
@@ -2697,6 +2725,7 @@ function renderContas() {
         ${st==='vencida' ? `<div style="font-size:10px;color:var(--red);margin-top:2px">⚠ Vencida</div>` : ''}
       </td>
       <td style="color:${st==='vencida'?'var(--red)':'var(--muted)'};font-size:12px">${fmtD(c.venc)}</td>
+      <td>${catBadge(c.cat)}</td>
       <td class="td-num" style="color:${c.tipo==='receber'?'var(--green)':'var(--red)'}">${fmt(Number(c.valor))}</td>
       <td>
         <div class="dropdown" id="dd-${c.id}">
@@ -2730,6 +2759,7 @@ function renderContas() {
       </td>
       <td style="color:var(--hint);font-size:12px">${fmtD(c.venc)}</td>
       <td style="font-size:12px;${dpClass}">${dpago}${dpIcon}</td>
+      <td>${catBadge(c.cat)}</td>
       <td class="td-num" style="color:var(--hint)">${fmt(Number(c.valor))}</td>
       <td>
         <div class="dropdown" id="dd-${c.id}">
@@ -2745,34 +2775,28 @@ function renderContas() {
     </tr>`;
   };
 
-  const emptyPend  = '<tr class="empty-row"><td colspan="4" style="padding:28px;text-align:center;color:var(--hint)">Nenhuma pendente</td></tr>';
-  const emptyPagos = '<tr class="empty-row"><td colspan="5" style="padding:28px;text-align:center;color:var(--hint)">Nenhum pagamento</td></tr>';
-  const emptyRec   = '<tr class="empty-row"><td colspan="4" style="padding:28px;text-align:center;color:var(--hint)">Nenhuma a receber</td></tr>';
+  const emptyPend  = '<tr class="empty-row"><td colspan="5" style="padding:28px;text-align:center;color:var(--hint)">Nenhuma pendente</td></tr>';
+  const emptyPagos = '<tr class="empty-row"><td colspan="6" style="padding:28px;text-align:center;color:var(--hint)">Nenhum pagamento</td></tr>';
+  const emptyRec   = '<tr class="empty-row"><td colspan="5" style="padding:28px;text-align:center;color:var(--hint)">Nenhuma a receber</td></tr>';
 
-  // A pagar — pendentes e vencidas (não pagas, tipo pagar)
-  const pagar = applyF(
-    DB.contas.filter(c => c.tipo === 'pagar' && !c.pago)
-  ).sort((a,b) => new Date(a.venc) - new Date(b.venc));
-
-  // Pagos — tipo pagar que já foram pagos
-  const pagos = applyF(
-    DB.contas.filter(c => c.tipo === 'pagar' && c.pago)
-  ).sort((a,b) => new Date(b.venc) - new Date(a.venc));
-
-  // A receber — tipo receber
-  const receber = applyF(
-    DB.contas.filter(c => c.tipo === 'receber')
-  ).sort((a,b) => new Date(a.venc) - new Date(b.venc));
+  const pagar   = applyF(DB.contas.filter(c => c.tipo === 'pagar'   && !c.pago)).sort((a,b) => new Date(a.venc) - new Date(b.venc));
+  const pagos   = applyF(DB.contas.filter(c => c.tipo === 'pagar'   &&  c.pago)).sort((a,b) => new Date(b.venc) - new Date(a.venc));
+  const receber = applyF(DB.contas.filter(c => c.tipo === 'receber'           )).sort((a,b) => new Date(a.venc) - new Date(b.venc));
 
   document.getElementById('ct-pagar').innerHTML   = pagar.length   ? pagar.map(rowPending).join('')  : emptyPend;
   document.getElementById('ct-pagos').innerHTML   = pagos.length   ? pagos.map(rowPaid).join('')     : emptyPagos;
   document.getElementById('ct-receber').innerHTML = receber.length ? receber.map(rowPending).join('') : emptyRec;
 
-  // counters
-  const fmtCount = (n, total) => n === total ? `${n}` : `${n} / ${total}`;
   document.getElementById('ct-pagar-count').textContent   = `${pagar.length} pendente${pagar.length!==1?'s':''}`;
   document.getElementById('ct-pagos-count').textContent   = `${pagos.length} pago${pagos.length!==1?'s':''}`;
   document.getElementById('ct-receber-count').textContent = `${receber.length} item${receber.length!==1?'s':''}`;
+}
+
+function syncContaCatFilter() {
+  const el = document.getElementById('cf_cat'); if (!el) return;
+  const cur = el.value;
+  el.innerHTML = '<option value="">Todas</option>' + DB.categorias.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+  el.value = cur;
 }
 
 // ── DROPDOWN HELPERS ──────────────────────────────────────────────────────
@@ -2798,6 +2822,8 @@ function openEditModal(id) {
   document.getElementById('edit_desc').value  = c.desc;
   document.getElementById('edit_valor').value = Number(c.valor).toFixed(2);
   document.getElementById('edit_venc').value  = c.venc;
+  updateEditContaCatSelect();
+  document.getElementById('edit_cat').value   = c.cat || '';
   document.getElementById('modal-conta').classList.remove('hidden');
 }
 function closeModal() {
@@ -2813,12 +2839,13 @@ async function salvarEdicaoConta() {
   setSaving('saving');
   try {
     const fid = document.getElementById('edit_fornecedor')?.value || null;
+    const cat = document.getElementById('edit_cat')?.value || '';
     const c = DB.contas.find(c => c.id === id);
-    const antes = c ? {tipo:c.tipo, descricao:c.desc, valor:Number(c.valor), venc:c.venc} : null;
+    const antes = c ? {tipo:c.tipo, descricao:c.desc, valor:Number(c.valor), venc:c.venc, cat:c.cat} : null;
     const usuario = currentUser?.display_name || '';
-    await sbUpdate('contas', id, { tipo, descricao: desc, valor, venc, fornecedor_id: fid, editado_por: usuario, editado_em: new Date().toISOString() });
-    await registrarAudit('editou', 'contas', id, antes, {tipo, descricao:desc, valor, venc});
-    if (c) { c.tipo = tipo; c.desc = desc; c.descricao = desc; c.valor = valor; c.venc = venc; c.fornecedor_id = fid; }
+    await sbUpdate('contas', id, { tipo, descricao: desc, valor, venc, cat, fornecedor_id: fid, editado_por: usuario, editado_em: new Date().toISOString() });
+    await registrarAudit('editou', 'contas', id, antes, {tipo, descricao:desc, valor, venc, cat});
+    if (c) { c.tipo = tipo; c.desc = desc; c.descricao = desc; c.valor = valor; c.venc = venc; c.cat = cat; c.fornecedor_id = fid; }
     closeModal();
     setSaving('ok'); toast('Conta atualizada ✓');
     renderContas();
