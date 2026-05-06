@@ -214,7 +214,7 @@
   .form-group { display: flex; flex-direction: column; gap: 5px; }
   .form-label { font-size: 10.5px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
 
-  input, select {
+  input:not([type="checkbox"]), select {
     font-family: var(--font); font-size: 13px;
     color: var(--text); background: var(--bg2);
     border: 1px solid var(--border); border-radius: var(--radius-xs);
@@ -222,14 +222,20 @@
     transition: border-color .2s, box-shadow .2s, background .2s;
     -webkit-appearance: none;
   }
-  input::placeholder { color: var(--hint); }
-  input:focus, select:focus {
+  input[type="checkbox"] {
+    width: 16px; height: 16px; min-width: 16px;
+    accent-color: var(--accent2); cursor: pointer;
+    appearance: auto; -webkit-appearance: auto;
+    padding: 0; border: none; background: none;
+  }
+  input:not([type="checkbox"])::placeholder { color: var(--hint); }
+  input:not([type="checkbox"]):focus, select:focus {
     border-color: var(--accent);
     background: var(--surface2);
     box-shadow: 0 0 0 3px var(--accent-glow);
   }
   input[type="number"] { font-family: var(--mono); }
-  input.err { border-color: var(--red) !important; box-shadow: 0 0 0 3px rgba(248,113,113,.15) !important; }
+  input:not([type="checkbox"]).err { border-color: var(--red) !important; box-shadow: 0 0 0 3px rgba(248,113,113,.15) !important; }
 
   select option { background: var(--surface2); color: var(--text); }
 
@@ -759,16 +765,13 @@
   }
   .bulk-btn-close:hover { background: var(--border-light); color: var(--text); }
 
-  /* checkbox style */
-  .row-check {
-    width: 15px; height: 15px; accent-color: var(--accent2);
-    cursor: pointer; flex-shrink: 0;
+  /* checkbox cols */
+  th.check-col, td.check-col {
+    width: 36px !important;
+    padding: 8px 4px 8px 12px !important;
+    text-align: center;
   }
-  .col-check-all {
-    width: 15px; height: 15px; accent-color: var(--accent2); cursor: pointer;
-  }
-  th.check-col, td.check-col { width: 30px !important; padding: 8px 6px 8px 14px !important; }
-  tr.selected-row { background: rgba(124,111,234,.06) !important; }
+  tr.selected-row { background: rgba(124,111,234,.09) !important; }
 
   .confetti-piece {
     position: fixed;
@@ -1330,43 +1333,79 @@
         <div class="filter-spacer"></div>
         <button class="btn btn-ghost btn-sm" onclick="resetFilter('contas')">Limpar</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:16px">
 
         <!-- A PAGAR -->
         <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:14px 18px 0;display:flex;align-items:center;gap:8px">
-            <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber)"></div>
-            <div class="card-title" style="margin:0">A pagar</div>
-            <span id="ct-pagar-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
+          <div style="padding:14px 20px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-light)">
+            <div style="width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 7px var(--amber);flex-shrink:0"></div>
+            <div style="font-size:13px;font-weight:600;letter-spacing:-.2px">A pagar</div>
+            <span id="ct-pagar-count" style="font-size:11px;color:var(--hint);font-family:var(--mono);background:var(--amber-bg);color:var(--amber);padding:2px 8px;border-radius:20px;border:1px solid rgba(251,191,36,.2)"></span>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+              <span id="ct-pagar-total" style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:500"></span>
+            </div>
           </div>
-          <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('pagar',this)"></th><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:90px">Categoria</th><th style="width:80px">Valor</th><th style="width:34px"></th></tr></thead>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('pagar',this)"></th>
+              <th>Descrição</th>
+              <th style="width:100px">Categoria</th>
+              <th style="width:95px">Vencimento</th>
+              <th style="width:110px">Fornecedor</th>
+              <th style="width:90px">Valor</th>
+              <th style="width:80px">Status</th>
+              <th style="width:34px"></th>
+            </tr></thead>
             <tbody id="ct-pagar"></tbody>
           </table></div>
         </div>
 
         <!-- PAGOS -->
         <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:14px 18px 0;display:flex;align-items:center;gap:8px">
-            <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green-mid)"></div>
-            <div class="card-title" style="margin:0">Pagos</div>
-            <span id="ct-pagos-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
+          <div style="padding:14px 20px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-light)">
+            <div style="width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green-mid);flex-shrink:0"></div>
+            <div style="font-size:13px;font-weight:600;letter-spacing:-.2px">Pagos</div>
+            <span id="ct-pagos-count" style="font-size:11px;font-family:var(--mono);background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:20px;border:1px solid rgba(52,211,153,.2)"></span>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+              <span id="ct-pagos-total" style="font-family:var(--mono);font-size:12px;color:var(--green);font-weight:500"></span>
+            </div>
           </div>
-          <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('pagos',this)"></th><th>Descrição</th><th style="width:75px">Venc.</th><th style="width:82px">Dt. Pago</th><th style="width:90px">Categoria</th><th style="width:80px">Valor</th><th style="width:34px"></th></tr></thead>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('pagos',this)"></th>
+              <th>Descrição</th>
+              <th style="width:100px">Categoria</th>
+              <th style="width:95px">Vencimento</th>
+              <th style="width:105px">Dt. Pagamento</th>
+              <th style="width:110px">Fornecedor</th>
+              <th style="width:90px">Valor</th>
+              <th style="width:34px"></th>
+            </tr></thead>
             <tbody id="ct-pagos"></tbody>
           </table></div>
         </div>
 
         <!-- A RECEBER -->
         <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:14px 18px 0;display:flex;align-items:center;gap:8px">
-            <div style="width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 6px var(--accent)"></div>
-            <div class="card-title" style="margin:0">A receber</div>
-            <span id="ct-receber-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
+          <div style="padding:14px 20px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-light)">
+            <div style="width:9px;height:9px;border-radius:50%;background:var(--accent2);box-shadow:0 0 7px var(--accent);flex-shrink:0"></div>
+            <div style="font-size:13px;font-weight:600;letter-spacing:-.2px">A receber</div>
+            <span id="ct-receber-count" style="font-size:11px;font-family:var(--mono);background:var(--accent-light);color:var(--accent2);padding:2px 8px;border-radius:20px;border:1px solid rgba(124,111,234,.2)"></span>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+              <span id="ct-receber-total" style="font-family:var(--mono);font-size:12px;color:var(--green);font-weight:500"></span>
+            </div>
           </div>
-          <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('receber',this)"></th><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:90px">Categoria</th><th style="width:80px">Valor</th><th style="width:34px"></th></tr></thead>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('receber',this)"></th>
+              <th>Descrição</th>
+              <th style="width:100px">Categoria</th>
+              <th style="width:95px">Vencimento</th>
+              <th style="width:110px">Cliente</th>
+              <th style="width:90px">Valor</th>
+              <th style="width:80px">Status</th>
+              <th style="width:34px"></th>
+            </tr></thead>
             <tbody id="ct-receber"></tbody>
           </table></div>
         </div>
@@ -2870,20 +2909,20 @@ function renderContas() {
   const rowPending = c => {
     const st = getStatus(c);
     const tipoBadge = contaTipoBadge(c);
-    return `<tr id="row-${c.id}" class="">
+    const stBadge = st === 'vencida'
+      ? `<span class="badge b-over" style="font-size:10px">Vencida</span>`
+      : `<span class="badge b-pend" style="font-size:10px">Pendente</span>`;
+    return `<tr id="row-${c.id}">
       <td class="check-col"><input type="checkbox" class="row-check" data-id="${c.id}" onchange="onRowCheck(this)"></td>
       <td>
         <div style="font-weight:500;font-size:13px">${c.desc}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">
-          ${tipoBadge || ''}
-          ${c.fornecedor_id ? `<span style="font-size:11px;color:var(--hint)">🏢 ${fornNome(c.fornecedor_id)}</span>` : ''}
-          ${c.obs ? `<span style="font-size:11px;color:var(--hint)" title="${c.obs}">💬 ${c.obs.length > 28 ? c.obs.slice(0,28)+'…' : c.obs}</span>` : ''}
-        </div>
-        ${st==='vencida' ? `<div style="font-size:10px;color:var(--red);margin-top:2px">⚠ Vencida</div>` : ''}
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">${tipoBadge || ''}</div>
       </td>
-      <td style="color:${st==='vencida'?'var(--red)':'var(--muted)'};font-size:12px">${fmtD(c.venc)}</td>
       <td>${catBadge(c.cat)}</td>
-      <td class="td-num" style="color:${c.tipo==='receber'?'var(--green)':'var(--red)'}">${fmt(Number(c.valor))}</td>
+      <td style="color:${st==='vencida'?'var(--red)':'var(--muted)'};font-size:12px;white-space:nowrap">${fmtD(c.venc)}</td>
+      <td style="font-size:12px;color:var(--muted)">${c.fornecedor_id ? fornNome(c.fornecedor_id) : '<span style="color:var(--hint)">—</span>'}</td>
+      <td class="td-num" style="color:${c.tipo==='receber'?'var(--green)':'var(--red)'};font-weight:600">${fmt(Number(c.valor))}</td>
+      <td>${stBadge}</td>
       <td>
         <div class="dropdown" id="dd-${c.id}">
           <button class="btn-dots" onclick="toggleDropdown('${c.id}',event)">···</button>
@@ -2905,18 +2944,16 @@ function renderContas() {
     const late  = c.data_pagamento && c.venc && c.data_pagamento > c.venc;
     const dpClass = early ? 'color:var(--green)' : late ? 'color:var(--amber)' : 'color:var(--hint)';
     const dpIcon  = early ? ' ✓' : late ? ' ⚠' : '';
-    return `<tr id="row-${c.id}" class="">
+    return `<tr id="row-${c.id}">
       <td class="check-col"><input type="checkbox" class="row-check" data-id="${c.id}" onchange="onRowCheck(this)"></td>
       <td>
         <div style="font-weight:500;font-size:13px;text-decoration:line-through;color:var(--hint)">${c.desc}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">
-          ${tipoBadge || ''}
-          ${c.fornecedor_id ? `<span style="font-size:11px;color:var(--hint)">🏢 ${fornNome(c.fornecedor_id)}</span>` : ''}
-        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">${tipoBadge || ''}</div>
       </td>
-      <td style="color:var(--hint);font-size:12px">${fmtD(c.venc)}</td>
-      <td style="font-size:12px;${dpClass}">${dpago}${dpIcon}</td>
       <td>${catBadge(c.cat)}</td>
+      <td style="color:var(--hint);font-size:12px;white-space:nowrap">${fmtD(c.venc)}</td>
+      <td style="font-size:12px;white-space:nowrap;${dpClass}">${dpago}${dpIcon}</td>
+      <td style="font-size:12px;color:var(--muted)">${c.fornecedor_id ? fornNome(c.fornecedor_id) : '<span style="color:var(--hint)">—</span>'}</td>
       <td class="td-num" style="color:var(--hint)">${fmt(Number(c.valor))}</td>
       <td>
         <div class="dropdown" id="dd-${c.id}">
@@ -2947,6 +2984,14 @@ function renderContas() {
   document.getElementById('ct-pagar-count').textContent   = `${pagar.length} pendente${pagar.length!==1?'s':''}`;
   document.getElementById('ct-pagos-count').textContent   = `${pagos.length} pago${pagos.length!==1?'s':''}`;
   document.getElementById('ct-receber-count').textContent = `${receber.length} item${receber.length!==1?'s':''}`;
+
+  const totalPagar   = pagar.reduce((s,c)=>s+Number(c.valor),0);
+  const totalPagos   = pagos.reduce((s,c)=>s+Number(c.valor),0);
+  const totalReceber = receber.reduce((s,c)=>s+Number(c.valor),0);
+  const tpEl = document.getElementById('ct-pagar-total');   if(tpEl) tpEl.textContent = totalPagar   > 0 ? fmt(totalPagar)   : '';
+  const tgEl = document.getElementById('ct-pagos-total');   if(tgEl) tgEl.textContent = totalPagos   > 0 ? fmt(totalPagos)   : '';
+  const trEl = document.getElementById('ct-receber-total'); if(trEl) trEl.textContent = totalReceber > 0 ? fmt(totalReceber) : '';
+
   updateBulkBar();
 }
 
