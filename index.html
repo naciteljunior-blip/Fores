@@ -717,7 +717,59 @@
   .feed-val { font-family: var(--mono); font-size: 13px; font-weight: 500; flex-shrink: 0; }
   .feed-val.in  { color: var(--green); }
   .feed-val.out { color: var(--red); }
-  /* ── CONFETTI ── */
+  /* ── BULK SELECT ── */
+  .bulk-bar {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 40px; padding: 10px 18px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    z-index: 200; opacity: 0; pointer-events: none;
+    transition: all .25s cubic-bezier(.4,0,.2,1);
+    white-space: nowrap;
+  }
+  .bulk-bar.visible {
+    opacity: 1; pointer-events: all;
+    transform: translateX(-50%) translateY(0);
+  }
+  .bulk-bar-count {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    background: var(--accent-light); color: var(--accent2);
+    padding: 3px 10px; border-radius: 20px;
+    font-family: var(--mono);
+  }
+  .bulk-bar-label { font-size: 13px; color: var(--muted); }
+  .bulk-bar-divider { width: 1px; height: 20px; background: var(--border); }
+  .bulk-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--bg2);
+    color: var(--text); cursor: pointer; transition: all .15s;
+  }
+  .bulk-btn:hover { background: var(--surface2); border-color: var(--muted); }
+  .bulk-btn.danger { color: var(--red); border-color: rgba(248,113,113,.3); }
+  .bulk-btn.danger:hover { background: var(--red-bg); }
+  .bulk-btn.success { color: var(--green); border-color: rgba(52,211,153,.3); }
+  .bulk-btn.success:hover { background: var(--green-bg); }
+  .bulk-btn-close {
+    width: 28px; height: 28px; border-radius: 50%; border: none;
+    background: none; color: var(--hint); font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .bulk-btn-close:hover { background: var(--border-light); color: var(--text); }
+
+  /* checkbox style */
+  .row-check {
+    width: 15px; height: 15px; accent-color: var(--accent2);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .col-check-all {
+    width: 15px; height: 15px; accent-color: var(--accent2); cursor: pointer;
+  }
+  th.check-col, td.check-col { width: 30px !important; padding: 8px 6px 8px 14px !important; }
+  tr.selected-row { background: rgba(124,111,234,.06) !important; }
+
   .confetti-piece {
     position: fixed;
     width: 9px; height: 9px;
@@ -1288,7 +1340,7 @@
             <span id="ct-pagar-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
           </div>
           <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:100px">Categoria</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
+            <thead><tr><th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('pagar',this)"></th><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:90px">Categoria</th><th style="width:80px">Valor</th><th style="width:34px"></th></tr></thead>
             <tbody id="ct-pagar"></tbody>
           </table></div>
         </div>
@@ -1301,7 +1353,7 @@
             <span id="ct-pagos-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
           </div>
           <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:90px">Dt. Pagamento</th><th style="width:100px">Categoria</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
+            <thead><tr><th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('pagos',this)"></th><th>Descrição</th><th style="width:75px">Venc.</th><th style="width:82px">Dt. Pago</th><th style="width:90px">Categoria</th><th style="width:80px">Valor</th><th style="width:34px"></th></tr></thead>
             <tbody id="ct-pagos"></tbody>
           </table></div>
         </div>
@@ -1314,7 +1366,7 @@
             <span id="ct-receber-count" style="margin-left:auto;font-size:10px;color:var(--hint);font-family:var(--mono)"></span>
           </div>
           <div class="table-wrap" style="padding:0 0 4px"><table>
-            <thead><tr><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:100px">Categoria</th><th style="width:85px">Valor</th><th style="width:34px"></th></tr></thead>
+            <thead><tr><th class="check-col"><input type="checkbox" class="col-check-all" onchange="toggleSelectAll('receber',this)"></th><th>Descrição</th><th style="width:80px">Venc.</th><th style="width:90px">Categoria</th><th style="width:80px">Valor</th><th style="width:34px"></th></tr></thead>
             <tbody id="ct-receber"></tbody>
           </table></div>
         </div>
@@ -1646,6 +1698,22 @@
     </div>
 
   </main>
+</div>
+
+<!-- BULK ACTION BAR -->
+<div class="bulk-bar" id="bulk-bar">
+  <span class="bulk-bar-count" id="bulk-count">0</span>
+  <span class="bulk-bar-label">selecionada(s)</span>
+  <div class="bulk-bar-divider"></div>
+  <button class="bulk-btn success" onclick="bulkBaixar()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" style="width:13px;height:13px"><path d="M2 8.5l3.5 3.5L13 4"/></svg>
+    Baixar seleção
+  </button>
+  <button class="bulk-btn danger" onclick="bulkExcluir()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><path d="M3 4h10M6 4V2.5h4V4M5.5 4l.5 9h4l.5-9"/></svg>
+    Excluir seleção
+  </button>
+  <button class="bulk-btn-close" onclick="clearBulkSelection()" title="Cancelar seleção">✕</button>
 </div>
 
 <!-- MODAL ALTERAR CONTA -->
@@ -2689,6 +2757,83 @@ function contaTipoBadge(c) {
   return '';
 }
 
+// ── BULK SELECTION ────────────────────────────────────────────────────────
+function getSelectedIds() {
+  return [...document.querySelectorAll('.row-check:checked')].map(el => el.dataset.id);
+}
+
+function updateBulkBar() {
+  const ids = getSelectedIds();
+  const bar = document.getElementById('bulk-bar');
+  document.getElementById('bulk-count').textContent = ids.length;
+  bar.classList.toggle('visible', ids.length > 0);
+}
+
+function onRowCheck(el) {
+  const row = el.closest('tr');
+  row.classList.toggle('selected-row', el.checked);
+  updateBulkBar();
+}
+
+function toggleSelectAll(col, masterEl) {
+  const tbodyId = col === 'pagar' ? 'ct-pagar' : col === 'pagos' ? 'ct-pagos' : 'ct-receber';
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  tbody.querySelectorAll('.row-check').forEach(cb => {
+    cb.checked = masterEl.checked;
+    cb.closest('tr').classList.toggle('selected-row', masterEl.checked);
+  });
+  updateBulkBar();
+}
+
+function clearBulkSelection() {
+  document.querySelectorAll('.row-check:checked').forEach(cb => {
+    cb.checked = false;
+    cb.closest('tr').classList.remove('selected-row');
+  });
+  document.querySelectorAll('.col-check-all').forEach(cb => cb.checked = false);
+  updateBulkBar();
+}
+
+async function bulkExcluir() {
+  const ids = getSelectedIds();
+  if (!ids.length) return;
+  if (!confirm(`Excluir ${ids.length} conta(s) selecionada(s)? Esta ação não pode ser desfeita.`)) return;
+  setSaving('saving');
+  try {
+    await Promise.all(ids.map(id => sbDelete('contas', id)));
+    DB.contas = DB.contas.filter(c => !ids.includes(c.id));
+    setSaving('ok');
+    toast(`🗑 ${ids.length} conta(s) excluída(s)`);
+    renderContas();
+  } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
+}
+
+async function bulkBaixar() {
+  const ids = getSelectedIds();
+  if (!ids.length) return;
+  // Verifica se alguma já está paga
+  const selecionadas = DB.contas.filter(c => ids.includes(c.id));
+  const jaPagas = selecionadas.filter(c => c.pago);
+  const aBaixar = selecionadas.filter(c => !c.pago);
+  if (!aBaixar.length) {
+    toast('Todas as selecionadas já estão pagas', false); return;
+  }
+  const msg = jaPagas.length
+    ? `Baixar ${aBaixar.length} conta(s)? (${jaPagas.length} já estão pagas e serão ignoradas)`
+    : `Baixar ${aBaixar.length} conta(s) como pagas?`;
+  if (!confirm(msg)) return;
+  setSaving('saving');
+  try {
+    await Promise.all(aBaixar.map(c => sbUpdate('contas', c.id, { pago: true, data_pagamento: today })));
+    aBaixar.forEach(c => { c.pago = true; c.data_pagamento = today; });
+    setSaving('ok');
+    launchConfetti();
+    toast(`💸 ${aBaixar.length} conta(s) baixada(s)!`);
+    renderContas();
+  } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
+}
+
 function syncContaCatFilter() {
   const el = document.getElementById('cf_cat'); if (!el) return;
   const cur = el.value;
@@ -2722,11 +2867,11 @@ function renderContas() {
     ? `<span style="display:inline-flex;align-items:center;font-size:10px;padding:2px 7px;border-radius:20px;background:var(--accent-light);color:var(--accent2);border:1px solid rgba(124,111,234,.2);font-weight:500;white-space:nowrap">${cat}</span>`
     : '<span style="color:var(--hint);font-size:11px">—</span>';
 
-  // Row for "A pagar" and "A receber" (pendente/vencida)
   const rowPending = c => {
     const st = getStatus(c);
     const tipoBadge = contaTipoBadge(c);
-    return `<tr>
+    return `<tr id="row-${c.id}" class="">
+      <td class="check-col"><input type="checkbox" class="row-check" data-id="${c.id}" onchange="onRowCheck(this)"></td>
       <td>
         <div style="font-weight:500;font-size:13px">${c.desc}</div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">
@@ -2741,7 +2886,7 @@ function renderContas() {
       <td class="td-num" style="color:${c.tipo==='receber'?'var(--green)':'var(--red)'}">${fmt(Number(c.valor))}</td>
       <td>
         <div class="dropdown" id="dd-${c.id}">
-          <button class="btn-dots" onclick="toggleDropdown('${c.id}',event)" title="Opções">···</button>
+          <button class="btn-dots" onclick="toggleDropdown('${c.id}',event)">···</button>
           <div class="dropdown-menu" id="ddm-${c.id}">
             <button class="dropdown-item success" onclick="closeAllDropdowns();togglePago('${c.id}')">✓ Pagar conta</button>
             <button class="dropdown-item" onclick="closeAllDropdowns();openEditModal('${c.id}')">✏️ Alterar</button>
@@ -2753,7 +2898,6 @@ function renderContas() {
     </tr>`;
   };
 
-  // Row for "Pagos"
   const rowPaid = c => {
     const tipoBadge = contaTipoBadge(c);
     const dpago = c.data_pagamento ? fmtD(c.data_pagamento) : '—';
@@ -2761,7 +2905,8 @@ function renderContas() {
     const late  = c.data_pagamento && c.venc && c.data_pagamento > c.venc;
     const dpClass = early ? 'color:var(--green)' : late ? 'color:var(--amber)' : 'color:var(--hint)';
     const dpIcon  = early ? ' ✓' : late ? ' ⚠' : '';
-    return `<tr>
+    return `<tr id="row-${c.id}" class="">
+      <td class="check-col"><input type="checkbox" class="row-check" data-id="${c.id}" onchange="onRowCheck(this)"></td>
       <td>
         <div style="font-weight:500;font-size:13px;text-decoration:line-through;color:var(--hint)">${c.desc}</div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">
@@ -2775,7 +2920,7 @@ function renderContas() {
       <td class="td-num" style="color:var(--hint)">${fmt(Number(c.valor))}</td>
       <td>
         <div class="dropdown" id="dd-${c.id}">
-          <button class="btn-dots" onclick="toggleDropdown('${c.id}',event)" title="Opções">···</button>
+          <button class="btn-dots" onclick="toggleDropdown('${c.id}',event)">···</button>
           <div class="dropdown-menu" id="ddm-${c.id}">
             <button class="dropdown-item" onclick="closeAllDropdowns();togglePago('${c.id}')">↩ Desfazer pagamento</button>
             <button class="dropdown-item" onclick="closeAllDropdowns();openEditModal('${c.id}')">✏️ Alterar</button>
@@ -2802,6 +2947,7 @@ function renderContas() {
   document.getElementById('ct-pagar-count').textContent   = `${pagar.length} pendente${pagar.length!==1?'s':''}`;
   document.getElementById('ct-pagos-count').textContent   = `${pagos.length} pago${pagos.length!==1?'s':''}`;
   document.getElementById('ct-receber-count').textContent = `${receber.length} item${receber.length!==1?'s':''}`;
+  updateBulkBar();
 }
 
 // ── DROPDOWN HELPERS ──────────────────────────────────────────────────────
