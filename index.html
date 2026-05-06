@@ -1317,6 +1317,17 @@
       </div>
       <div class="filter-bar">
         <div class="filter-group">
+          <span class="filter-label">Período</span>
+          <select id="cf_periodo" onchange="renderContas()">
+            <option value="mes" selected>Este mês</option>
+            <option value="anterior">Mês anterior</option>
+            <option value="proximo">Próximo mês</option>
+            <option value="trim">Próx. 3 meses</option>
+            <option value="ano">Este ano</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
+        <div class="filter-group">
           <span class="filter-label">Status</span>
           <select id="cf_status" onchange="renderContas()">
             <option value="">Todos</option><option value="pendente">Pendentes</option><option value="pago">Pagos</option><option value="vencida">Vencidas</option>
@@ -2130,7 +2141,13 @@ function showPage(id) {
 function resetFilter(s) {
   if (s==='dashboard')   { document.getElementById('d_periodo').value='mes'; document.getElementById('d_cat').value=''; renderDashboard(); }
   if (s==='lancamentos') { ['lf_periodo','lf_tipo','lf_cat'].forEach(id=>document.getElementById(id).value=''); document.getElementById('lf_search').value=''; renderLancamentos(); }
-  if (s==='contas')      { document.getElementById('cf_status').value=''; document.getElementById('cf_search').value=''; const cfCat=document.getElementById('cf_cat'); if(cfCat) cfCat.value=''; renderContas(); }
+  if (s==='contas') {
+    document.getElementById('cf_status').value='';
+    document.getElementById('cf_search').value='';
+    document.getElementById('cf_periodo').value='mes';
+    const cfCat=document.getElementById('cf_cat'); if(cfCat) cfCat.value='';
+    renderContas();
+  }
   if (s==='movimentos')  { ['mv_tipo','mv_periodo','mv_cat','mv_ordem'].forEach(id=>document.getElementById(id).value=''); document.getElementById('mv_search').value=''; ['mv_custom_wrap','mv_custom_wrap2'].forEach(id=>document.getElementById(id).style.display='none'); renderMovimentos(); }
   if (s==='recorrentes') { ['rcf_tipo','rcf_freq','rcf_status'].forEach(id=>document.getElementById(id).value=''); renderRecorrentes(); }
   if (s==='auditoria')   { ['af_user','af_acao','af_entidade','af_periodo'].forEach(id=>document.getElementById(id).value=''); renderAuditoria(); }
@@ -2886,18 +2903,37 @@ function renderContas() {
       !document.getElementById('ct-pagos') ||
       !document.getElementById('ct-receber')) return;
 
-  const fstatus = document.getElementById('cf_status')?.value || '';
-  const fcat    = document.getElementById('cf_cat')?.value    || '';
-  const search  = (document.getElementById('cf_search')?.value || '').toLowerCase();
+  const fstatus  = document.getElementById('cf_status')?.value  || '';
+  const fcat     = document.getElementById('cf_cat')?.value     || '';
+  const fperiodo = document.getElementById('cf_periodo')?.value || 'mes';
+  const search   = (document.getElementById('cf_search')?.value || '').toLowerCase();
 
   syncContaCatFilter();
+
+  // Build date range for period filter
+  const now2 = new Date();
+  const mesAtual = { y: now2.getFullYear(), m: now2.getMonth() };
+  function getPeriodRange(p) {
+    const y = mesAtual.y, m = mesAtual.m;
+    if (p === 'mes')      return { s: new Date(y, m, 1),   e: new Date(y, m+1, 0) };
+    if (p === 'anterior') return { s: new Date(y, m-1, 1), e: new Date(y, m, 0)   };
+    if (p === 'proximo')  return { s: new Date(y, m+1, 1), e: new Date(y, m+2, 0) };
+    if (p === 'trim')     return { s: new Date(y, m, 1),   e: new Date(y, m+3, 0) };
+    if (p === 'ano')      return { s: new Date(y, 0, 1),   e: new Date(y, 11, 31) };
+    return null; // 'todos'
+  }
+  const pRange = getPeriodRange(fperiodo);
 
   function applyF(list) {
     return list.filter(c => {
       const st = getStatus(c);
       if (fstatus && fstatus !== st) return false;
-      if (fcat   && c.cat !== fcat)  return false;
-      if (search && !c.desc.toLowerCase().includes(search)) return false;
+      if (fcat    && c.cat !== fcat)  return false;
+      if (search  && !c.desc.toLowerCase().includes(search)) return false;
+      if (pRange) {
+        const d = new Date(c.venc + 'T12:00:00');
+        if (d < pRange.s || d > pRange.e) return false;
+      }
       return true;
     });
   }
@@ -2981,9 +3017,12 @@ function renderContas() {
   document.getElementById('ct-pagos').innerHTML   = pagos.length   ? pagos.map(rowPaid).join('')     : emptyPagos;
   document.getElementById('ct-receber').innerHTML = receber.length ? receber.map(rowPending).join('') : emptyRec;
 
-  document.getElementById('ct-pagar-count').textContent   = `${pagar.length} pendente${pagar.length!==1?'s':''}`;
-  document.getElementById('ct-pagos-count').textContent   = `${pagos.length} pago${pagos.length!==1?'s':''}`;
-  document.getElementById('ct-receber-count').textContent = `${receber.length} item${receber.length!==1?'s':''}`;
+  const periodoLabels = {mes:'Este mês',anterior:'Mês anterior',proximo:'Próx. mês',trim:'Próx. 3 meses',ano:'Este ano',todos:'Todos'};
+  const pLabel = periodoLabels[fperiodo] || '';
+
+  document.getElementById('ct-pagar-count').textContent   = `${pagar.length} pendente${pagar.length!==1?'s':''} · ${pLabel}`;
+  document.getElementById('ct-pagos-count').textContent   = `${pagos.length} pago${pagos.length!==1?'s':''} · ${pLabel}`;
+  document.getElementById('ct-receber-count').textContent = `${receber.length} item${receber.length!==1?'s':''} · ${pLabel}`;
 
   const totalPagar   = pagar.reduce((s,c)=>s+Number(c.valor),0);
   const totalPagos   = pagos.reduce((s,c)=>s+Number(c.valor),0);
