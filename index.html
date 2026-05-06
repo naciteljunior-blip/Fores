@@ -1704,12 +1704,17 @@ async function hashPassword(pass) {
 }
 
 function enterApp(user) {
+  // Normaliza o campo de nome independente de como veio do banco
+  user.display_name = user.display_name || user.displayName || user.username || 'Usuário';
   currentUser = user;
   sessionStorage.setItem('cx_user', JSON.stringify(user));
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('user-name-label').textContent = user.display_name;
   document.getElementById('user-avatar').textContent = user.display_name.charAt(0).toUpperCase();
-  init();
+  init().catch(e => {
+    showLoading(false);
+    toast('Erro ao carregar dados: ' + e.message, false);
+  });
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────
@@ -1865,13 +1870,22 @@ window.addEventListener('DOMContentLoaded', () => {
   if (saved) {
     try {
       currentUser = JSON.parse(saved);
+      const name = currentUser.display_name || currentUser.displayName || currentUser.username || '?';
       document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('user-name-label').textContent = currentUser.displayName;
-      document.getElementById('user-avatar').textContent = currentUser.displayName.charAt(0).toUpperCase();
-      init();
-    } catch(e) { sessionStorage.removeItem('cx_user'); }
+      document.getElementById('user-name-label').textContent = name;
+      document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
+      init().catch(e => {
+        // Se init falhar (ex: rede), mostra erro mas não trava
+        showLoading(false);
+        toast('Erro ao carregar dados: ' + e.message, false);
+      });
+    } catch(e) {
+      sessionStorage.removeItem('cx_user');
+      showLoading(false);
+      setTimeout(() => document.getElementById('li_user').focus(), 100);
+    }
   } else {
-    document.getElementById('loading').style.display = 'none';
+    showLoading(false);
     setTimeout(() => document.getElementById('li_user').focus(), 100);
   }
 });
