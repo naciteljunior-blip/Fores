@@ -6,6 +6,7 @@
 <title>NexFlow — Financial Synergy</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -949,6 +950,74 @@
     .metrics { grid-template-columns: repeat(3, 1fr); }
     .metric-value { font-size: 14px; }
   }
+
+  /* ── NOTIFICAÇÕES ── */
+  .notif-setup-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 14px;
+  }
+  .notif-setup-title {
+    font-size: 13px; font-weight: 600; margin-bottom: 4px; letter-spacing: -.2px;
+  }
+  .notif-setup-desc {
+    font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.6;
+  }
+  .notif-status-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 16px; border-radius: var(--radius-sm); margin-bottom: 16px;
+    font-size: 13px; font-weight: 500;
+  }
+  .notif-status-banner.ok    { background: var(--green-bg);  color: var(--green);  border: 1px solid rgba(52,211,153,.2); }
+  .notif-status-banner.warn  { background: var(--amber-bg);  color: var(--amber);  border: 1px solid rgba(251,191,36,.2); }
+  .notif-status-banner.error { background: var(--red-bg);    color: var(--red);    border: 1px solid rgba(248,113,113,.2); }
+  .notif-preview-card {
+    background: var(--bg2); border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); padding: 14px 16px; margin-top: 10px;
+  }
+  .notif-preview-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--hint); font-weight: 500; margin-bottom: 10px;
+  }
+  .notif-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+  }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    font-weight: 600; white-space: nowrap; flex-shrink: 0;
+  }
+  .notif-badge.hoje   { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(248,113,113,.2); }
+  .notif-badge.em3    { background: var(--amber-bg);  color: var(--amber); border: 1px solid rgba(251,191,36,.2); }
+  .notif-badge.ok     { background: var(--green-bg);  color: var(--green); border: 1px solid rgba(52,211,153,.2); }
+  .notif-info-box {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: rgba(124,111,234,.06); border: 1px solid rgba(124,111,234,.15);
+    border-radius: var(--radius-xs); padding: 12px 14px;
+    font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 14px;
+  }
+  .notif-step {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid var(--border-light);
+  }
+  .notif-step:last-child { border-bottom: none; }
+  .notif-step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-light); color: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  }
+  .notif-step-text { font-size: 13px; line-height: 1.5; }
+  .notif-step-text a { color: var(--accent2); text-decoration: none; }
+  .notif-step-text a:hover { text-decoration: underline; }
+  .notif-step-sub { font-size: 11px; color: var(--hint); margin-top: 3px; }
+  .notif-history-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border-light);
+    font-size: 12px;
+  }
+  .notif-history-item:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -1063,6 +1132,11 @@
       <button class="nav-item" onclick="showPage('auditoria')">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v12H2z"/><path d="M5 6h6M5 8.5h4M5 11h3"/><circle cx="11.5" cy="10.5" r="2" stroke-width="1.5"/><path d="M13 12l1 1"/></svg>
         Auditoria
+      </button>
+      <button class="nav-item" id="nav-notificacoes" onclick="showPage('notificacoes')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a4.5 4.5 0 00-4.5 4.5v2.5L2 11h12l-1.5-2V6.5A4.5 4.5 0 008 2z"/><path d="M6.5 11v.5a1.5 1.5 0 003 0V11"/></svg>
+        Notificações
+        <span id="notif-nav-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto"></span>
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -1747,6 +1821,153 @@
       </div>
     </div>
 
+    <!-- NOTIFICAÇÕES -->
+    <div id="p-notificacoes" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Notificações por E-mail</div>
+          <div class="page-subtitle">Receba alertas automáticos de contas a vencer</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="verificarENotificar(true)">🔔 Testar agora</button>
+          <button class="btn btn-primary btn-sm" onclick="salvarConfigNotif()">💾 Salvar configuração</button>
+        </div>
+      </div>
+
+      <!-- STATUS BANNER -->
+      <div id="notif-status-banner" style="display:none" class="notif-status-banner"></div>
+
+      <div class="two-col">
+
+        <!-- COLUNA ESQUERDA: CONFIGURAÇÃO -->
+        <div>
+          <!-- Card: E-mail de destino -->
+          <div class="card">
+            <div class="card-title">📬 Configurações de alerta</div>
+            <div class="form-group" style="margin-bottom:12px">
+              <label class="form-label">E-mail de destino</label>
+              <input type="email" id="notif_email" placeholder="seuemail@exemplo.com">
+              <div style="font-size:11px;color:var(--hint);margin-top:4px">E-mail que receberá os alertas de vencimento</div>
+            </div>
+            <div class="form-grid-2" style="margin-bottom:12px">
+              <div class="form-group">
+                <label class="form-label" style="display:flex;align-items:center;gap:6px">
+                  <input type="checkbox" id="notif_3dias" checked>
+                  Alertar 3 dias antes
+                </label>
+                <div style="font-size:11px;color:var(--hint);margin-top:4px">Envia e-mail quando faltam exatamente 3 dias para o vencimento</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="display:flex;align-items:center;gap:6px">
+                  <input type="checkbox" id="notif_hoje" checked>
+                  Alertar no dia do vencimento
+                </label>
+                <div style="font-size:11px;color:var(--hint);margin-top:4px">Envia e-mail no próprio dia do vencimento</div>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px">
+              <label class="form-label">Tipos de conta a notificar</label>
+              <div style="display:flex;gap:16px;margin-top:4px">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer">
+                  <input type="checkbox" id="notif_tipo_pagar" checked> A pagar
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer">
+                  <input type="checkbox" id="notif_tipo_receber" checked> A receber
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Credenciais EmailJS -->
+          <div class="card">
+            <div class="card-title">🔑 Credenciais EmailJS</div>
+            <div class="notif-setup-desc">O EmailJS permite enviar e-mails direto do navegador sem servidor. Configure sua conta gratuita em <a href="https://www.emailjs.com" target="_blank" style="color:var(--accent2)">emailjs.com</a></div>
+            <div class="form-group" style="margin-bottom:10px">
+              <label class="form-label">Public Key (User ID)</label>
+              <input type="text" id="notif_pubkey" placeholder="Ex: user_xxxxxxxxxxxx">
+            </div>
+            <div class="form-group" style="margin-bottom:10px">
+              <label class="form-label">Service ID</label>
+              <input type="text" id="notif_service" placeholder="Ex: service_xxxxxxx">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Template ID</label>
+              <input type="text" id="notif_template" placeholder="Ex: template_xxxxxxx">
+            </div>
+          </div>
+
+          <!-- Card: Guia de setup -->
+          <div class="card">
+            <div class="card-title">📋 Como configurar o EmailJS</div>
+            <div style="display:flex;flex-direction:column;gap:0">
+              <div class="notif-step">
+                <div class="notif-step-num">1</div>
+                <div class="notif-step-text">
+                  Acesse <a href="https://www.emailjs.com" target="_blank">emailjs.com</a> e crie uma conta gratuita
+                  <div class="notif-step-sub">Plano gratuito: 200 e-mails/mês</div>
+                </div>
+              </div>
+              <div class="notif-step">
+                <div class="notif-step-num">2</div>
+                <div class="notif-step-text">
+                  Em <strong>Email Services</strong>, conecte seu Gmail, Outlook ou outro provedor
+                  <div class="notif-step-sub">Copie o <strong>Service ID</strong> gerado</div>
+                </div>
+              </div>
+              <div class="notif-step">
+                <div class="notif-step-num">3</div>
+                <div class="notif-step-text">
+                  Em <strong>Email Templates</strong>, crie um template com as variáveis abaixo:
+                  <div class="notif-step-sub" style="font-family:var(--mono);font-size:10.5px;margin-top:6px;line-height:1.9">
+                    <code style="background:var(--bg2);padding:1px 5px;border-radius:3px">{{to_email}}</code> — destinatário<br>
+                    <code style="background:var(--bg2);padding:1px 5px;border-radius:3px">{{subject}}</code> — assunto<br>
+                    <code style="background:var(--bg2);padding:1px 5px;border-radius:3px">{{message}}</code> — lista de contas<br>
+                    <code style="background:var(--bg2);padding:1px 5px;border-radius:3px">{{total_contas}}</code> — quantidade<br>
+                    <code style="background:var(--bg2);padding:1px 5px;border-radius:3px">{{total_valor}}</code> — valor total
+                  </div>
+                </div>
+              </div>
+              <div class="notif-step">
+                <div class="notif-step-num">4</div>
+                <div class="notif-step-text">
+                  Em <strong>Account → API Keys</strong>, copie a <strong>Public Key</strong>
+                  <div class="notif-step-sub">Cole nos campos ao lado e salve a configuração</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUNA DIREITA: PREVIEW E HISTÓRICO -->
+        <div>
+          <!-- Contas pendentes próximas -->
+          <div class="card">
+            <div class="card-title">🔍 Contas que serão notificadas</div>
+            <div id="notif-preview-list">
+              <div style="text-align:center;color:var(--hint);padding:24px;font-size:13px">Carregando contas...</div>
+            </div>
+          </div>
+
+          <!-- Histórico de envios -->
+          <div class="card">
+            <div class="card-title">📜 Histórico de notificações enviadas</div>
+            <div id="notif-history-list">
+              <div style="text-align:center;color:var(--hint);padding:24px;font-size:13px">Nenhuma notificação enviada ainda</div>
+            </div>
+          </div>
+
+          <!-- Info box -->
+          <div class="notif-info-box">
+            <span style="font-size:16px;flex-shrink:0">💡</span>
+            <div>
+              <strong style="color:var(--text)">Como funciona:</strong> A cada acesso ao sistema, verificamos automaticamente as contas a vencer nos próximos 3 dias e no dia atual. Se houver contas pendentes e a configuração de e-mail estiver ativa, o alerta é enviado automaticamente — uma vez por dia por conta.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -2120,6 +2341,8 @@ async function init() {
     document.getElementById('rc_prox').value = today;
     syncCatDropdowns(); updateCatSelect(); updateContaCatSelect();
     renderDashboard(); renderLancamentos(); renderContas(); renderCategorias();
+    // verificar notificações automaticamente após carregar
+    rodarVerificacaoNotificacoes();
   } catch(e) {
     toast('Erro ao conectar: ' + e.message, false);
   }
@@ -2137,11 +2360,13 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('p-' + id).classList.add('active');
-  const idx = ['dashboard','lancamentos','contas','movimentos','categorias','fornecedores','auditoria'].indexOf(id);
-  document.querySelectorAll('.nav-item')[idx].classList.add('active');
+  const navIds = ['dashboard','lancamentos','contas','movimentos','categorias','fornecedores','auditoria','notificacoes'];
+  const idx = navIds.indexOf(id);
+  if (idx >= 0) document.querySelectorAll('.nav-item')[idx]?.classList.add('active');
   if (id === 'recorrentes') { syncRecCatSelect(); renderRecorrentes(); }
   if (id === 'movimentos')  { syncMvCatSelect(); renderMovimentos(); }
   if (id === 'auditoria')   { loadAuditoria(); }
+  if (id === 'notificacoes') { carregarConfigNotif(); renderNotifPreview(); renderNotifHistory(); }
 }
 
 function resetFilter(s) {
@@ -3614,5 +3839,271 @@ function exportAuditoria() {
   const stamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
   XLSX.writeFile(wb, `auditoria_${stamp}.xlsx`);
   toast(`${rows.length} registros exportados ✓`);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// SISTEMA DE NOTIFICAÇÕES POR E-MAIL
+// ══════════════════════════════════════════════════════════════════════════
+
+const NOTIF_CONFIG_KEY = 'cx_notif_config';
+const NOTIF_HISTORY_KEY = 'cx_notif_history';
+const NOTIF_SENT_KEY = 'cx_notif_sent_today'; // controle de deduplicação
+
+// ── Salvar/carregar configuração ─────────────────────────────────────────
+function salvarConfigNotif() {
+  const email    = document.getElementById('notif_email')?.value.trim() || '';
+  const pubkey   = document.getElementById('notif_pubkey')?.value.trim() || '';
+  const service  = document.getElementById('notif_service')?.value.trim() || '';
+  const template = document.getElementById('notif_template')?.value.trim() || '';
+  const dias3    = document.getElementById('notif_3dias')?.checked ?? true;
+  const hoje     = document.getElementById('notif_hoje')?.checked ?? true;
+  const tipoPagar    = document.getElementById('notif_tipo_pagar')?.checked ?? true;
+  const tipoReceber  = document.getElementById('notif_tipo_receber')?.checked ?? true;
+
+  if (!email) { toast('Informe um e-mail de destino', false); return; }
+
+  const cfg = { email, pubkey, service, template, dias3, hoje, tipoPagar, tipoReceber, ativa: !!(pubkey && service && template) };
+  localStorage.setItem(NOTIF_CONFIG_KEY, JSON.stringify(cfg));
+
+  if (!pubkey || !service || !template) {
+    mostrarBannerNotif('warn', '⚠️ Configuração salva, mas as credenciais do EmailJS estão incompletas. Complete-as para habilitar o envio.');
+  } else {
+    mostrarBannerNotif('ok', '✅ Configuração salva! Notificações ativas. O sistema verificará automaticamente a cada acesso.');
+    toast('Configuração de notificações salva ✓');
+  }
+}
+
+function carregarConfigNotif() {
+  const raw = localStorage.getItem(NOTIF_CONFIG_KEY);
+  if (!raw) return;
+  try {
+    const cfg = JSON.parse(raw);
+    if (document.getElementById('notif_email'))    document.getElementById('notif_email').value    = cfg.email    || '';
+    if (document.getElementById('notif_pubkey'))   document.getElementById('notif_pubkey').value   = cfg.pubkey   || '';
+    if (document.getElementById('notif_service'))  document.getElementById('notif_service').value  = cfg.service  || '';
+    if (document.getElementById('notif_template')) document.getElementById('notif_template').value = cfg.template || '';
+    if (document.getElementById('notif_3dias'))    document.getElementById('notif_3dias').checked    = cfg.dias3   ?? true;
+    if (document.getElementById('notif_hoje'))     document.getElementById('notif_hoje').checked     = cfg.hoje    ?? true;
+    if (document.getElementById('notif_tipo_pagar'))   document.getElementById('notif_tipo_pagar').checked   = cfg.tipoPagar   ?? true;
+    if (document.getElementById('notif_tipo_receber')) document.getElementById('notif_tipo_receber').checked = cfg.tipoReceber ?? true;
+    if (cfg.ativa) {
+      mostrarBannerNotif('ok', `✅ Notificações ativas — alertas enviados para <strong>${cfg.email}</strong>`);
+    } else if (cfg.email) {
+      mostrarBannerNotif('warn', '⚠️ E-mail configurado, mas credenciais do EmailJS incompletas');
+    }
+  } catch(e) { /* ignore */ }
+}
+
+function mostrarBannerNotif(tipo, msg) {
+  const el = document.getElementById('notif-status-banner');
+  if (!el) return;
+  el.className = `notif-status-banner ${tipo}`;
+  el.innerHTML = msg;
+  el.style.display = 'flex';
+}
+
+// ── Obter contas que precisam de notificação ─────────────────────────────
+function getContasParaNotificar(cfg) {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const em3  = new Date(hoje); em3.setDate(em3.getDate() + 3);
+
+  return DB.contas.filter(c => {
+    if (c.pago) return false;
+    // filtro de tipo
+    if (c.tipo === 'pagar'   && !cfg.tipoPagar)   return false;
+    if (c.tipo === 'receber' && !cfg.tipoReceber)  return false;
+    const venc = new Date(c.venc + 'T12:00:00'); venc.setHours(0,0,0,0);
+    const diffMs   = venc - hoje;
+    const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    // vence hoje
+    if (cfg.hoje && diffDias === 0) return true;
+    // vence em 3 dias
+    if (cfg.dias3 && diffDias === 3) return true;
+    return false;
+  }).map(c => {
+    const venc = new Date(c.venc + 'T12:00:00'); venc.setHours(0,0,0,0);
+    const hoje2 = new Date(); hoje2.setHours(0,0,0,0);
+    const diffDias = Math.round((venc - hoje2) / (1000 * 60 * 60 * 24));
+    return { ...c, diffDias };
+  });
+}
+
+// ── Preview na página de notificações ────────────────────────────────────
+function renderNotifPreview() {
+  const el = document.getElementById('notif-preview-list');
+  if (!el) return;
+
+  const cfgRaw = localStorage.getItem(NOTIF_CONFIG_KEY);
+  const cfg = cfgRaw ? JSON.parse(cfgRaw) : { dias3: true, hoje: true, tipoPagar: true, tipoReceber: true };
+  const contas = getContasParaNotificar(cfg);
+
+  // Atualizar badge do nav
+  const badge = document.getElementById('notif-nav-badge');
+  if (badge) {
+    if (contas.length > 0) { badge.textContent = contas.length; badge.style.display = ''; }
+    else badge.style.display = 'none';
+  }
+
+  if (!contas.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--hint);padding:24px;font-size:13px">✅ Nenhuma conta vencendo hoje ou nos próximos 3 dias</div>';
+    return;
+  }
+
+  el.innerHTML = contas.map(c => {
+    const label = c.diffDias === 0 ? 'Vence HOJE' : `Vence em ${c.diffDias} dias`;
+    const cls   = c.diffDias === 0 ? 'hoje' : 'em3';
+    const tipoColor = c.tipo === 'pagar' ? 'var(--red)' : 'var(--green)';
+    return `<div class="notif-item">
+      <span class="notif-badge ${cls}">${label}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.desc || c.descricao}</div>
+        <div style="font-size:11px;color:var(--hint);margin-top:2px">${fmtD(c.venc)} · ${c.tipo === 'pagar' ? 'A pagar' : 'A receber'}</div>
+      </div>
+      <span style="font-family:var(--mono);font-size:13px;font-weight:500;color:${tipoColor};flex-shrink:0">${fmt(Number(c.valor))}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Histórico de envios ───────────────────────────────────────────────────
+function renderNotifHistory() {
+  const el = document.getElementById('notif-history-list');
+  if (!el) return;
+  const raw = localStorage.getItem(NOTIF_HISTORY_KEY);
+  const history = raw ? JSON.parse(raw) : [];
+  if (!history.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--hint);padding:24px;font-size:13px">Nenhuma notificação enviada ainda</div>';
+    return;
+  }
+  el.innerHTML = [...history].reverse().slice(0,20).map(h => `
+    <div class="notif-history-item">
+      <span style="font-size:16px">${h.ok ? '✅' : '❌'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500">${h.ok ? 'Enviado para' : 'Falha ao enviar'} ${h.email}</div>
+        <div style="font-size:11px;color:var(--hint);margin-top:1px">${h.contas} conta(s) · ${h.data}</div>
+      </div>
+      ${!h.ok && h.erro ? `<span style="font-size:11px;color:var(--red);max-width:120px;text-align:right">${h.erro}</span>` : ''}
+    </div>`).join('');
+}
+
+function adicionarHistoricoNotif(entry) {
+  const raw = localStorage.getItem(NOTIF_HISTORY_KEY);
+  const history = raw ? JSON.parse(raw) : [];
+  history.push({ ...entry, data: new Date().toLocaleString('pt-BR') });
+  // manter apenas os últimos 100 registros
+  if (history.length > 100) history.splice(0, history.length - 100);
+  localStorage.setItem(NOTIF_HISTORY_KEY, JSON.stringify(history));
+}
+
+// ── Montar o corpo do e-mail ──────────────────────────────────────────────
+function montarMensagemEmail(contas) {
+  const hoje = contas.filter(c => c.diffDias === 0);
+  const em3  = contas.filter(c => c.diffDias === 3);
+  let msg = '';
+  if (hoje.length) {
+    msg += '🔴 VENCEM HOJE:\n';
+    hoje.forEach(c => {
+      const tipo = c.tipo === 'pagar' ? 'A pagar' : 'A receber';
+      msg += `  • ${c.desc || c.descricao} — ${fmt(Number(c.valor))} (${tipo})\n`;
+    });
+    msg += '\n';
+  }
+  if (em3.length) {
+    msg += '🟡 VENCEM EM 3 DIAS:\n';
+    em3.forEach(c => {
+      const tipo = c.tipo === 'pagar' ? 'A pagar' : 'A receber';
+      msg += `  • ${c.desc || c.descricao} — ${fmt(Number(c.valor))} (${tipo}) · venc. ${fmtD(c.venc)}\n`;
+    });
+  }
+  return msg;
+}
+
+// ── Deduplicação: não enviar mais de 1x por dia por conta ─────────────────
+function getIdsSentToday() {
+  const raw = localStorage.getItem(NOTIF_SENT_KEY);
+  if (!raw) return { date: '', ids: [] };
+  try { return JSON.parse(raw); } catch { return { date: '', ids: [] }; }
+}
+
+function marcarEnviadosHoje(ids) {
+  const today = new Date().toISOString().split('T')[0];
+  localStorage.setItem(NOTIF_SENT_KEY, JSON.stringify({ date: today, ids }));
+}
+
+// ── Verificar e enviar notificações ──────────────────────────────────────
+async function verificarENotificar(force = false) {
+  const cfgRaw = localStorage.getItem(NOTIF_CONFIG_KEY);
+  if (!cfgRaw) return; // sem configuração, nada a fazer
+  let cfg;
+  try { cfg = JSON.parse(cfgRaw); } catch { return; }
+  if (!cfg.ativa || !cfg.email || !cfg.pubkey || !cfg.service || !cfg.template) return;
+
+  const contas = getContasParaNotificar(cfg);
+  if (!contas.length) return;
+
+  // Atualizar badge mesmo sem enviar
+  const badge = document.getElementById('notif-nav-badge');
+  if (badge) { badge.textContent = contas.length; badge.style.display = ''; }
+
+  // Verificar deduplicação (não enviar de novo hoje, a menos que force=true)
+  if (!force) {
+    const sentData = getIdsSentToday();
+    const today = new Date().toISOString().split('T')[0];
+    if (sentData.date === today) {
+      // filtrar apenas contas não enviadas hoje
+      const novas = contas.filter(c => !sentData.ids.includes(c.id));
+      if (!novas.length) return; // todas já foram notificadas hoje
+    }
+  }
+
+  // Montar dados para o template
+  const totalValor = contas.reduce((s, c) => s + Number(c.valor), 0);
+  const hoje = contas.filter(c => c.diffDias === 0);
+  const em3  = contas.filter(c => c.diffDias === 3);
+
+  let subject = '';
+  if (hoje.length && em3.length) subject = `⚠️ NexFlow: ${contas.length} contas vencendo hoje e em 3 dias`;
+  else if (hoje.length)          subject = `🔴 NexFlow: ${hoje.length} conta(s) vencem HOJE!`;
+  else                           subject = `🟡 NexFlow: ${em3.length} conta(s) vencem em 3 dias`;
+
+  const message = montarMensagemEmail(contas);
+
+  try {
+    // Inicializar EmailJS
+    emailjs.init(cfg.pubkey);
+
+    await emailjs.send(cfg.service, cfg.template, {
+      to_email:     cfg.email,
+      subject:      subject,
+      message:      message,
+      total_contas: contas.length.toString(),
+      total_valor:  fmt(totalValor)
+    });
+
+    // Marcar como enviadas hoje
+    marcarEnviadosHoje(contas.map(c => c.id));
+    adicionarHistoricoNotif({ ok: true, email: cfg.email, contas: contas.length });
+
+    if (force) {
+      toast(`📧 E-mail enviado para ${cfg.email} com ${contas.length} alerta(s) ✓`);
+      renderNotifHistory();
+    }
+  } catch(e) {
+    const erroMsg = e?.text || e?.message || String(e);
+    adicionarHistoricoNotif({ ok: false, email: cfg.email, contas: contas.length, erro: erroMsg });
+    if (force) {
+      toast(`❌ Erro ao enviar e-mail: ${erroMsg}`, false);
+      renderNotifHistory();
+    }
+    console.warn('Erro EmailJS:', e);
+  }
+}
+
+// ── Rodar verificação automática após carregar dados ──────────────────────
+// Chamado no init() após os dados serem carregados
+async function rodarVerificacaoNotificacoes() {
+  // pequeno delay para garantir que DB está populado
+  await new Promise(r => setTimeout(r, 800));
+  renderNotifPreview(); // atualiza badge
+  await verificarENotificar(false);
 }
 </script>
