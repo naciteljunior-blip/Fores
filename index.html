@@ -3315,11 +3315,7 @@ async function togglePago(id) {
         origem_conta_id: c.id,
         criado_por: currentUser?.display_name || ''
       });
-      const novoLanc = {
-        ...lancRows[0],
-        desc: lancRows[0].descricao,
-        created_at: lancRows[0].created_at || new Date().toISOString()
-      };
+      const novoLanc = { ...lancRows[0], desc: lancRows[0].descricao };
       DB.lancamentos.unshift(novoLanc);
 
       await sbUpdate('contas', id, { pago: true, data_pagamento: dataPagamento, lancamento_id: novoLanc.id });
@@ -3473,30 +3469,12 @@ async function bulkBaixar() {
   if (!confirm(msg)) return;
   setSaving('saving');
   try {
-    const _now = new Date().toISOString();
-    await Promise.all(aBaixar.map(async c => {
-      const _tipo = c.tipo === 'pagar' ? 'saida' : 'entrada';
-      const _lancRows = await sbInsert('lancamentos', {
-        tipo: _tipo,
-        data: today,
-        descricao: c.desc,
-        cat: c.cat || '',
-        valor: c.valor,
-        origem_conta_id: c.id,
-        criado_por: currentUser?.display_name || ''
-      });
-      const _novoLanc = { ..._lancRows[0], desc: _lancRows[0].descricao, created_at: _lancRows[0].created_at || _now };
-      DB.lancamentos.unshift(_novoLanc);
-      await sbUpdate('contas', c.id, { pago: true, data_pagamento: today, lancamento_id: _novoLanc.id });
-      c.pago = true;
-      c.data_pagamento = today;
-      c.lancamento_id = _novoLanc.id;
-    }));
+    await Promise.all(aBaixar.map(c => sbUpdate('contas', c.id, { pago: true, data_pagamento: today })));
+    aBaixar.forEach(c => { c.pago = true; c.data_pagamento = today; });
     setSaving('ok');
     launchConfetti();
     toast(`💸 ${aBaixar.length} conta(s) baixada(s)!`);
     renderAll();
-    renderMovimentos();
   } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
 }
 
@@ -4768,5 +4746,613 @@ function limparNotificacoes() {
 // Fechar painel com ESC
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') fecharPainelNotif();
+});
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CHAT IA FINANCEIRO
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- Botão flutuante -->
+<button id="chat-fab" onclick="toggleChat()" title="Assistente Financeiro IA" style="
+  position:fixed; bottom:28px; right:28px; z-index:500;
+  width:54px; height:54px; border-radius:50%; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#7c6fea,#34d399);
+  box-shadow:0 4px 20px rgba(124,111,234,.45), 0 0 0 0 rgba(124,111,234,.3);
+  display:flex; align-items:center; justify-content:center;
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+  animation: fabPulse 3s ease-in-out infinite;
+">
+  <svg id="chat-fab-icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:24px;height:24px;transition:transform .25s">
+    <path d="M12 2C6.48 2 2 6.03 2 11c0 2.67 1.19 5.07 3.09 6.78L4 22l4.5-1.5C9.56 20.81 10.75 21 12 21c5.52 0 10-4.03 10-9S17.52 2 12 2z"/>
+    <path d="M8 11h8M8 14.5h5" stroke-linecap="round"/>
+  </svg>
+</button>
+
+<style>
+@keyframes fabPulse {
+  0%,100% { box-shadow: 0 4px 20px rgba(124,111,234,.45), 0 0 0 0 rgba(124,111,234,.3); }
+  50%      { box-shadow: 0 4px 20px rgba(124,111,234,.55), 0 0 0 10px rgba(124,111,234,0); }
+}
+
+/* Painel do chat */
+#chat-panel {
+  position:fixed; bottom:96px; right:28px; z-index:499;
+  width:380px; max-height:580px;
+  background:#18181d; border:1px solid #2a2a35;
+  border-radius:16px;
+  box-shadow:0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
+  display:flex; flex-direction:column;
+  transform:scale(.92) translateY(16px); opacity:0; pointer-events:none;
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;
+}
+#chat-panel.open {
+  transform:none; opacity:1; pointer-events:all;
+}
+
+/* Header */
+#chat-header {
+  padding:14px 16px 12px;
+  background:linear-gradient(135deg,rgba(124,111,234,.15),rgba(52,211,153,.08));
+  border-bottom:1px solid #2a2a35;
+  display:flex; align-items:center; gap:10px;
+}
+#chat-header-avatar {
+  width:34px; height:34px; border-radius:50%;
+  background:linear-gradient(135deg,#7c6fea,#34d399);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  font-size:16px;
+}
+#chat-header-info { flex:1; min-width:0; }
+#chat-header-title { font-size:13px; font-weight:600; color:#e8e8f0; }
+#chat-header-status { font-size:10.5px; color:#8888a0; display:flex; align-items:center; gap:5px; margin-top:1px; }
+#chat-status-dot { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 6px #10b981; flex-shrink:0; }
+#chat-close { background:none; border:none; cursor:pointer; color:#55556a; font-size:18px; line-height:1; padding:2px 4px; border-radius:6px; transition:all .15s; }
+#chat-close:hover { color:#e8e8f0; background:#2a2a35; }
+
+/* Sugestões rápidas */
+#chat-suggestions {
+  padding:10px 12px 0;
+  display:flex; gap:6px; flex-wrap:wrap;
+}
+.chat-sugg {
+  font-size:11px; padding:4px 10px;
+  background:rgba(124,111,234,.1); color:#9b8ff5;
+  border:1px solid rgba(124,111,234,.2); border-radius:20px;
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+}
+.chat-sugg:hover { background:rgba(124,111,234,.2); border-color:rgba(124,111,234,.4); }
+
+/* Mensagens */
+#chat-messages {
+  flex:1; overflow-y:auto; padding:12px;
+  display:flex; flex-direction:column; gap:8px;
+  min-height:0;
+}
+#chat-messages::-webkit-scrollbar { width:3px; }
+#chat-messages::-webkit-scrollbar-thumb { background:#2a2a35; border-radius:3px; }
+
+.chat-msg {
+  display:flex; gap:8px; animation: msgIn .2s ease;
+}
+@keyframes msgIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.chat-msg.user { flex-direction:row-reverse; }
+
+.chat-bubble {
+  max-width:80%; padding:9px 13px; border-radius:12px;
+  font-size:13px; line-height:1.5; word-break:break-word;
+}
+.chat-msg.user .chat-bubble {
+  background:linear-gradient(135deg,#7c6fea,#6257d4); color:#fff;
+  border-bottom-right-radius:3px;
+}
+.chat-msg.ai .chat-bubble {
+  background:#1e1e25; color:#e8e8f0; border:1px solid #2a2a35;
+  border-bottom-left-radius:3px;
+}
+.chat-msg-avatar {
+  width:26px; height:26px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:12px;
+  background:linear-gradient(135deg,#7c6fea,#34d399); margin-top:2px;
+}
+
+/* Resultado da ação */
+.chat-action-card {
+  background:#111115; border:1px solid #2a2a35;
+  border-radius:10px; padding:10px 13px; margin-top:6px;
+  font-size:12px;
+}
+.chat-action-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0; }
+.chat-action-label { color:#8888a0; }
+.chat-action-val { color:#e8e8f0; font-weight:500; }
+.chat-action-val.pos { color:#34d399; }
+.chat-action-val.neg { color:#f87171; }
+.chat-action-val.warn { color:#fbbf24; }
+
+/* Typing indicator */
+.chat-typing { display:flex; gap:4px; padding:4px 2px; }
+.chat-typing span {
+  width:6px; height:6px; border-radius:50%; background:#55556a;
+  animation: typingBounce 1.2s ease-in-out infinite;
+}
+.chat-typing span:nth-child(2) { animation-delay:.2s; }
+.chat-typing span:nth-child(3) { animation-delay:.4s; }
+@keyframes typingBounce { 0%,80%,100% { transform:none; } 40% { transform:translateY(-6px); background:#7c6fea; } }
+
+/* Input area */
+#chat-input-area {
+  padding:10px 12px 12px;
+  border-top:1px solid #2a2a35;
+  display:flex; gap:8px; align-items:flex-end;
+}
+#chat-input {
+  flex:1; background:#111115; border:1px solid #2a2a35;
+  border-radius:10px; padding:9px 12px;
+  color:#e8e8f0; font-family:'Inter',sans-serif; font-size:13px;
+  resize:none; outline:none; max-height:100px; min-height:38px;
+  line-height:1.4; transition:border-color .2s, box-shadow .2s;
+}
+#chat-input::placeholder { color:#55556a; }
+#chat-input:focus { border-color:#7c6fea; box-shadow:0 0 0 3px rgba(124,111,234,.15); }
+#chat-send {
+  width:36px; height:36px; border-radius:10px; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#7c6fea,#6257d4);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  transition:all .2s; flex-shrink:0;
+}
+#chat-send:hover { transform:scale(1.05); box-shadow:0 4px 14px rgba(124,111,234,.4); }
+#chat-send:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+#chat-send svg { width:16px; height:16px; }
+
+/* Config API Key */
+#chat-apikey-banner {
+  margin:10px 12px; padding:10px 13px;
+  background:rgba(251,191,36,.06); border:1px solid rgba(251,191,36,.2);
+  border-radius:10px; font-size:12px; color:#fbbf24;
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+  transition:background .15s;
+}
+#chat-apikey-banner:hover { background:rgba(251,191,36,.1); }
+
+@media (max-width:768px) {
+  #chat-panel { width:calc(100vw - 20px); right:10px; bottom:80px; max-height:70vh; }
+  #chat-fab   { bottom:72px; right:14px; }
+}
+</style>
+
+<!-- Painel -->
+<div id="chat-panel">
+  <div id="chat-header">
+    <div id="chat-header-avatar">🤖</div>
+    <div id="chat-header-info">
+      <div id="chat-header-title">Assistente Financeiro</div>
+      <div id="chat-header-status">
+        <div id="chat-status-dot"></div>
+        <span id="chat-status-text">Pronto para ajudar</span>
+      </div>
+    </div>
+    <button id="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+
+  <div id="chat-apikey-banner" onclick="configurarApiKey()" style="display:none">
+    ⚠️ Configure sua chave de API do Claude para usar o assistente
+  </div>
+
+  <div id="chat-suggestions">
+    <button class="chat-sugg" onclick="chatSuggestion(this)">💸 Paguei R$50 almoço</button>
+    <button class="chat-sugg" onclick="chatSuggestion(this)">💰 Recebi salário</button>
+    <button class="chat-sugg" onclick="chatSuggestion(this)">📋 Conta de luz vence dia 15</button>
+    <button class="chat-sugg" onclick="chatSuggestion(this)">📊 Resumo do mês</button>
+  </div>
+
+  <div id="chat-messages"></div>
+
+  <div id="chat-input-area">
+    <textarea id="chat-input" placeholder="Ex: paguei R$120 de mercado hoje..." rows="1"
+      oninput="chatAutoResize(this)" onkeydown="chatKeyDown(event)"></textarea>
+    <button id="chat-send" onclick="chatEnviar()" title="Enviar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CHAT IA — NexFlow Assistente Financeiro
+// ═══════════════════════════════════════════════════════════════
+
+let chatOpen = false;
+let chatCarregando = false;
+let chatHistorico = []; // histórico da conversa
+
+// ── Abrir / fechar ────────────────────────────────────────────
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const fab   = document.getElementById('chat-fab');
+  const icon  = document.getElementById('chat-fab-icon');
+  panel.classList.toggle('open', chatOpen);
+
+  if (chatOpen) {
+    fab.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
+    icon.innerHTML = '<path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/>';
+    verificarApiKey();
+    if (document.getElementById('chat-messages').children.length === 0) chatMensagemBoas();
+    setTimeout(() => document.getElementById('chat-input').focus(), 300);
+  } else {
+    fab.style.background = 'linear-gradient(135deg,#7c6fea,#34d399)';
+    icon.innerHTML = '<path d="M12 2C6.48 2 2 6.03 2 11c0 2.67 1.19 5.07 3.09 6.78L4 22l4.5-1.5C9.56 20.81 10.75 21 12 21c5.52 0 10-4.03 10-9S17.52 2 12 2z"/><path d="M8 11h8M8 14.5h5" stroke-linecap="round"/>';
+  }
+}
+
+// ── API Key ───────────────────────────────────────────────────
+function getApiKey() { return localStorage.getItem('nexflow_claude_key') || ''; }
+function setApiKey(k) { localStorage.setItem('nexflow_claude_key', k); }
+
+function verificarApiKey() {
+  const banner = document.getElementById('chat-apikey-banner');
+  banner.style.display = getApiKey() ? 'none' : 'flex';
+}
+
+function configurarApiKey() {
+  const atual = getApiKey();
+  const nova = prompt('Cole sua chave de API do Claude (Anthropic):\n\nObtida em: https://console.anthropic.com', atual);
+  if (nova !== null) {
+    if (nova.trim().startsWith('sk-ant-')) {
+      setApiKey(nova.trim());
+      verificarApiKey();
+      chatAdicionarMensagem('ai', '✅ Chave configurada! Agora posso analisar suas mensagens com IA. Pode mandar!');
+    } else if (nova.trim() === '') {
+      setApiKey('');
+      verificarApiKey();
+    } else {
+      alert('Chave inválida. Deve começar com sk-ant-');
+    }
+  }
+}
+
+// ── Mensagem de boas-vindas ───────────────────────────────────
+function chatMensagemBoas() {
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  const nome = currentUser?.display_name ? `, ${currentUser.display_name.split(' ')[0]}` : '';
+  chatAdicionarMensagem('ai',
+    `${saudacao}${nome}! 👋\n\nSou seu assistente financeiro. Você pode me dizer coisas como:\n\n• "Paguei R$120 de mercado hoje"\n• "Recebi R$3.500 de salário"\n• "Conta de luz R$180 vence dia 20"\n• "Qual meu saldo do mês?"\n\nVou interpretar e lançar automaticamente no sistema! 🚀`
+  );
+}
+
+// ── Sugestões rápidas ─────────────────────────────────────────
+function chatSuggestion(btn) {
+  const texto = btn.textContent.replace(/^[^\s]+\s/, '').trim();
+  document.getElementById('chat-input').value = texto;
+  document.getElementById('chat-input').focus();
+  chatAutoResize(document.getElementById('chat-input'));
+}
+
+// ── Auto-resize textarea ──────────────────────────────────────
+function chatAutoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ── Enter para enviar ─────────────────────────────────────────
+function chatKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatEnviar(); }
+}
+
+// ── Adicionar mensagem na UI ──────────────────────────────────
+function chatAdicionarMensagem(tipo, texto, extra = null) {
+  const container = document.getElementById('chat-messages');
+
+  const div = document.createElement('div');
+  div.className = `chat-msg ${tipo}`;
+
+  const bubbleTexto = texto.replace(/\n/g, '<br>');
+
+  let extraHtml = '';
+  if (extra && extra.tipo === 'card') {
+    extraHtml = `<div class="chat-action-card">` +
+      extra.rows.map(r => `<div class="chat-action-row">
+        <span class="chat-action-label">${r.label}</span>
+        <span class="chat-action-val ${r.cls||''}">${r.val}</span>
+      </div>`).join('') +
+      `</div>`;
+  }
+
+  if (tipo === 'ai') {
+    div.innerHTML = `
+      <div class="chat-msg-avatar">🤖</div>
+      <div><div class="chat-bubble">${bubbleTexto}</div>${extraHtml}</div>`;
+  } else {
+    div.innerHTML = `<div class="chat-bubble">${bubbleTexto}</div>`;
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+// ── Typing indicator ──────────────────────────────────────────
+function chatTyping(show) {
+  const existing = document.getElementById('chat-typing-msg');
+  if (existing) existing.remove();
+  if (!show) return;
+
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.id = 'chat-typing-msg';
+  div.className = 'chat-msg ai';
+  div.innerHTML = `
+    <div class="chat-msg-avatar">🤖</div>
+    <div class="chat-bubble" style="padding:10px 14px">
+      <div class="chat-typing"><span></span><span></span><span></span></div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── Status ────────────────────────────────────────────────────
+function chatStatus(texto, cor = '#34d399') {
+  const dot  = document.getElementById('chat-status-dot');
+  const span = document.getElementById('chat-status-text');
+  if (dot) dot.style.background = cor;
+  if (span) span.textContent = texto;
+}
+
+// ── ENVIAR mensagem ───────────────────────────────────────────
+async function chatEnviar() {
+  if (chatCarregando) return;
+  const input = document.getElementById('chat-input');
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  // Esconder sugestões depois do primeiro uso
+  document.getElementById('chat-suggestions').style.display = 'none';
+
+  chatAdicionarMensagem('user', texto);
+  input.value = '';
+  chatAutoResize(input);
+
+  // Adicionar ao histórico
+  chatHistorico.push({ role: 'user', content: texto });
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    chatAdicionarMensagem('ai', '⚠️ Configure sua chave de API primeiro clicando no aviso acima.');
+    return;
+  }
+
+  chatCarregando = true;
+  document.getElementById('chat-send').disabled = true;
+  chatTyping(true);
+  chatStatus('Analisando...', '#fbbf24');
+
+  try {
+    // Contexto do sistema financeiro atual
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const totalLanc = DB.lancamentos.length;
+    const totalContas = DB.contas.filter(c => !c.pago).length;
+    const mesAtual = new Date().getMonth();
+    const anoAtual = new Date().getFullYear();
+    const entradas = DB.lancamentos.filter(l => {
+      const d = new Date(l.data);
+      return l.tipo === 'entrada' && d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+    }).reduce((s, l) => s + Number(l.valor), 0);
+    const saidas = DB.lancamentos.filter(l => {
+      const d = new Date(l.data);
+      return l.tipo === 'saida' && d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+    }).reduce((s, l) => s + Number(l.valor), 0);
+    const saldo = entradas - saidas;
+
+    const cats = DB.categorias.map(c => c.nome).join(', ') || 'alimentação, transporte, moradia, saúde, lazer, salário, outros';
+
+    const systemPrompt = `Você é um assistente financeiro pessoal integrado ao sistema NexFlow.
+Data de hoje: ${hoje}
+Saldo do mês: R$ ${saldo.toFixed(2)} (Entradas: R$ ${entradas.toFixed(2)}, Saídas: R$ ${saidas.toFixed(2)})
+Total de lançamentos: ${totalLanc}
+Contas pendentes: ${totalContas}
+Categorias disponíveis: ${cats}
+
+Quando o usuário informar uma transação, um conta a pagar/receber, ou pedir informações, responda SOMENTE com um JSON válido neste formato exato (sem markdown, sem explicações, apenas JSON puro):
+{
+  "acao": "lancamento" | "conta_pagar" | "conta_receber" | "consulta" | "ignorar",
+  "tipo": "entrada" | "saida" | null,
+  "descricao": "string",
+  "valor": number | null,
+  "data": "YYYY-MM-DD" | null,
+  "vencimento": "YYYY-MM-DD" | null,
+  "categoria": "string" | null,
+  "resposta": "mensagem amigável em português para o usuário (máx 2 linhas)",
+  "resumo": "para consultas, o resumo em texto aqui"
+}
+
+Regras:
+- Para pagamentos/compras: acao="lancamento", tipo="saida"
+- Para recebimentos: acao="lancamento", tipo="entrada"  
+- Para contas a pagar: acao="conta_pagar"
+- Para contas a receber: acao="conta_receber"
+- Se não entender: acao="ignorar"
+- Infira a data como hoje (${new Date().toISOString().split('T')[0]}) se não informada
+- Infira a categoria com base na descrição
+- Para consultas de saldo/resumo: acao="consulta"`;
+
+    // Manter histórico limitado (últimas 6 trocas)
+    const historico = chatHistorico.slice(-12);
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        system: systemPrompt,
+        messages: historico
+      })
+    });
+
+    chatTyping(false);
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.content?.[0]?.text || '{}';
+
+    // Adicionar resposta ao histórico
+    chatHistorico.push({ role: 'assistant', content: rawText });
+
+    let parsed;
+    try {
+      const clean = rawText.replace(/^```json|^```|```$/gm, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      chatAdicionarMensagem('ai', rawText);
+      chatStatus('Pronto para ajudar');
+      chatCarregando = false;
+      document.getElementById('chat-send').disabled = false;
+      return;
+    }
+
+    await chatProcessarAcao(parsed);
+
+  } catch(e) {
+    chatTyping(false);
+    let msg = '❌ Erro ao conectar com a IA.';
+    if (e.message.includes('401')) msg = '❌ Chave de API inválida. Clique em ⚠️ para reconfigurar.';
+    else if (e.message.includes('429')) msg = '❌ Limite de requisições. Aguarde um momento.';
+    else if (e.message.includes('Failed to fetch')) msg = '❌ Sem conexão. Verifique sua internet.';
+    chatAdicionarMensagem('ai', msg);
+    chatStatus('Erro', '#f87171');
+    setTimeout(() => chatStatus('Pronto para ajudar'), 3000);
+  }
+
+  chatCarregando = false;
+  document.getElementById('chat-send').disabled = false;
+}
+
+// ── Processar ação retornada pela IA ─────────────────────────
+async function chatProcessarAcao(p) {
+  const R = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const fmtData = d => d ? d.split('-').reverse().join('/') : '—';
+
+  // ── CONSULTA (saldo/resumo) ───────────────────────────────
+  if (p.acao === 'consulta') {
+    chatAdicionarMensagem('ai', p.resumo || p.resposta || 'Aqui está o resumo do seu mês!');
+    chatStatus('Pronto para ajudar');
+    return;
+  }
+
+  // ── IGNORAR ───────────────────────────────────────────────
+  if (p.acao === 'ignorar' || !p.acao) {
+    chatAdicionarMensagem('ai', p.resposta || 'Não entendi. Tente: "Paguei R$50 de almoço" ou "Conta de luz R$120 vence dia 20".');
+    chatStatus('Pronto para ajudar');
+    return;
+  }
+
+  // ── LANÇAMENTO ────────────────────────────────────────────
+  if (p.acao === 'lancamento') {
+    if (!p.valor || !p.descricao) {
+      chatAdicionarMensagem('ai', '❓ Não consegui identificar o valor ou descrição. Pode detalhar mais?');
+      chatStatus('Pronto para ajudar');
+      return;
+    }
+    try {
+      chatStatus('Salvando lançamento...', '#7c6fea');
+      const data = p.data || new Date().toISOString().split('T')[0];
+      const rows = await sbInsert('lancamentos', {
+        tipo: p.tipo,
+        data,
+        descricao: p.descricao,
+        cat: p.categoria || '',
+        valor: p.valor,
+        criado_por: currentUser?.display_name || 'IA'
+      });
+      const novoLanc = { ...rows[0], desc: rows[0].descricao, created_at: rows[0].created_at || new Date().toISOString() };
+      DB.lancamentos.unshift(novoLanc);
+      renderAll();
+      renderMovimentos();
+
+      const isEntrada = p.tipo === 'entrada';
+      chatAdicionarMensagem('ai', p.resposta || (isEntrada ? '✅ Entrada registrada!' : '✅ Saída registrada!'), {
+        tipo: 'card',
+        rows: [
+          { label: 'Tipo',       val: isEntrada ? '↑ Entrada' : '↓ Saída', cls: isEntrada ? 'pos' : 'neg' },
+          { label: 'Descrição',  val: p.descricao },
+          { label: 'Valor',      val: R(p.valor), cls: isEntrada ? 'pos' : 'neg' },
+          { label: 'Data',       val: fmtData(data) },
+          { label: 'Categoria',  val: p.categoria || '—' },
+        ]
+      });
+      chatStatus('Lançamento salvo ✓', '#34d399');
+      setTimeout(() => chatStatus('Pronto para ajudar'), 2500);
+    } catch(e) {
+      chatAdicionarMensagem('ai', '❌ Erro ao salvar lançamento: ' + e.message);
+      chatStatus('Erro', '#f87171');
+      setTimeout(() => chatStatus('Pronto para ajudar'), 3000);
+    }
+    return;
+  }
+
+  // ── CONTA A PAGAR / RECEBER ───────────────────────────────
+  if (p.acao === 'conta_pagar' || p.acao === 'conta_receber') {
+    if (!p.valor || !p.descricao || !p.vencimento) {
+      chatAdicionarMensagem('ai', '❓ Preciso do valor, descrição e data de vencimento. Ex: "Conta de luz R$120 vence dia 20"');
+      chatStatus('Pronto para ajudar');
+      return;
+    }
+    try {
+      chatStatus('Salvando conta...', '#7c6fea');
+      const tipoConta = p.acao === 'conta_pagar' ? 'pagar' : 'receber';
+      const rows = await sbInsert('contas', {
+        tipo: tipoConta,
+        descricao: p.descricao,
+        valor: p.valor,
+        venc: p.vencimento,
+        pago: false,
+        cat: p.categoria || '',
+        criado_por: currentUser?.display_name || 'IA'
+      });
+      DB.contas.unshift({ ...rows[0], desc: rows[0].descricao });
+      renderAll();
+
+      const isPagar = tipoConta === 'pagar';
+      chatAdicionarMensagem('ai', p.resposta || (isPagar ? '✅ Conta a pagar criada!' : '✅ Conta a receber criada!'), {
+        tipo: 'card',
+        rows: [
+          { label: 'Tipo',       val: isPagar ? '💸 A pagar' : '💰 A receber', cls: isPagar ? 'neg' : 'pos' },
+          { label: 'Descrição',  val: p.descricao },
+          { label: 'Valor',      val: R(p.valor), cls: isPagar ? 'neg' : 'warn' },
+          { label: 'Vencimento', val: fmtData(p.vencimento), cls: 'warn' },
+          { label: 'Categoria',  val: p.categoria || '—' },
+        ]
+      });
+      chatStatus('Conta salva ✓', '#34d399');
+      setTimeout(() => chatStatus('Pronto para ajudar'), 2500);
+    } catch(e) {
+      chatAdicionarMensagem('ai', '❌ Erro ao salvar conta: ' + e.message);
+      chatStatus('Erro', '#f87171');
+      setTimeout(() => chatStatus('Pronto para ajudar'), 3000);
+    }
+    return;
+  }
+
+  // Fallback
+  chatAdicionarMensagem('ai', p.resposta || 'Pronto!');
+  chatStatus('Pronto para ajudar');
+}
+
+// ESC fecha o chat
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && chatOpen) toggleChat();
 });
 </script>
