@@ -2689,12 +2689,23 @@ function contaTipoBadge(c) {
   return '';
 }
 
-function renderContas() {
-  const fstatus = document.getElementById('cf_status').value;
-  const fcat    = document.getElementById('cf_cat')?.value || '';
-  const search  = document.getElementById('cf_search').value.toLowerCase();
+function syncContaCatFilter() {
+  const el = document.getElementById('cf_cat'); if (!el) return;
+  const cur = el.value;
+  el.innerHTML = '<option value="">Todas</option>' + DB.categorias.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+  el.value = cur;
+}
 
-  // sync cat select on every render
+function renderContas() {
+  // Guard — elementos podem não existir se a página ainda não foi visitada
+  if (!document.getElementById('ct-pagar') ||
+      !document.getElementById('ct-pagos') ||
+      !document.getElementById('ct-receber')) return;
+
+  const fstatus = document.getElementById('cf_status')?.value || '';
+  const fcat    = document.getElementById('cf_cat')?.value    || '';
+  const search  = (document.getElementById('cf_search')?.value || '').toLowerCase();
+
   syncContaCatFilter();
 
   function applyF(list) {
@@ -2791,13 +2802,6 @@ function renderContas() {
   document.getElementById('ct-pagar-count').textContent   = `${pagar.length} pendente${pagar.length!==1?'s':''}`;
   document.getElementById('ct-pagos-count').textContent   = `${pagos.length} pago${pagos.length!==1?'s':''}`;
   document.getElementById('ct-receber-count').textContent = `${receber.length} item${receber.length!==1?'s':''}`;
-}
-
-function syncContaCatFilter() {
-  const el = document.getElementById('cf_cat'); if (!el) return;
-  const cur = el.value;
-  el.innerHTML = '<option value="">Todas</option>' + DB.categorias.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
-  el.value = cur;
 }
 
 // ── DROPDOWN HELPERS ──────────────────────────────────────────────────────
