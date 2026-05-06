@@ -3315,7 +3315,11 @@ async function togglePago(id) {
         origem_conta_id: c.id,
         criado_por: currentUser?.display_name || ''
       });
-      const novoLanc = { ...lancRows[0], desc: lancRows[0].descricao };
+      const novoLanc = {
+        ...lancRows[0],
+        desc: lancRows[0].descricao,
+        created_at: lancRows[0].created_at || new Date().toISOString()
+      };
       DB.lancamentos.unshift(novoLanc);
 
       await sbUpdate('contas', id, { pago: true, data_pagamento: dataPagamento, lancamento_id: novoLanc.id });
@@ -3469,12 +3473,30 @@ async function bulkBaixar() {
   if (!confirm(msg)) return;
   setSaving('saving');
   try {
-    await Promise.all(aBaixar.map(c => sbUpdate('contas', c.id, { pago: true, data_pagamento: today })));
-    aBaixar.forEach(c => { c.pago = true; c.data_pagamento = today; });
+    const _now = new Date().toISOString();
+    await Promise.all(aBaixar.map(async c => {
+      const _tipo = c.tipo === 'pagar' ? 'saida' : 'entrada';
+      const _lancRows = await sbInsert('lancamentos', {
+        tipo: _tipo,
+        data: today,
+        descricao: c.desc,
+        cat: c.cat || '',
+        valor: c.valor,
+        origem_conta_id: c.id,
+        criado_por: currentUser?.display_name || ''
+      });
+      const _novoLanc = { ..._lancRows[0], desc: _lancRows[0].descricao, created_at: _lancRows[0].created_at || _now };
+      DB.lancamentos.unshift(_novoLanc);
+      await sbUpdate('contas', c.id, { pago: true, data_pagamento: today, lancamento_id: _novoLanc.id });
+      c.pago = true;
+      c.data_pagamento = today;
+      c.lancamento_id = _novoLanc.id;
+    }));
     setSaving('ok');
     launchConfetti();
     toast(`💸 ${aBaixar.length} conta(s) baixada(s)!`);
     renderAll();
+    renderMovimentos();
   } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
 }
 
