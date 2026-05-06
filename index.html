@@ -1318,7 +1318,7 @@
       <div class="filter-bar">
         <div class="filter-group">
           <span class="filter-label">Período</span>
-          <select id="cf_periodo" onchange="renderContas()">
+          <select id="cf_periodo" onchange="onContaPeriodoChange()">
             <option value="mes" selected>Este mês</option>
             <option value="anterior">Mês anterior</option>
             <option value="proximo">Próximo mês</option>
@@ -2890,6 +2890,15 @@ async function bulkBaixar() {
   } catch(e) { setSaving('err'); toast('Erro: ' + e.message, false); }
 }
 
+function onContaPeriodoChange() {
+  const p = document.getElementById('cf_periodo')?.value;
+  // Se mudar para período futuro e status estava em "vencida", reseta
+  if ((p === 'proximo' || p === 'trim') && document.getElementById('cf_status')?.value === 'vencida') {
+    document.getElementById('cf_status').value = '';
+  }
+  renderContas();
+}
+
 function syncContaCatFilter() {
   const el = document.getElementById('cf_cat'); if (!el) return;
   const cur = el.value;
@@ -2915,12 +2924,14 @@ function renderContas() {
   const mesAtual = { y: now2.getFullYear(), m: now2.getMonth() };
   function getPeriodRange(p) {
     const y = mesAtual.y, m = mesAtual.m;
-    if (p === 'mes')      return { s: new Date(y, m, 1),   e: new Date(y, m+1, 0) };
-    if (p === 'anterior') return { s: new Date(y, m-1, 1), e: new Date(y, m, 0)   };
-    if (p === 'proximo')  return { s: new Date(y, m+1, 1), e: new Date(y, m+2, 0) };
-    if (p === 'trim')     return { s: new Date(y, m, 1),   e: new Date(y, m+3, 0) };
-    if (p === 'ano')      return { s: new Date(y, 0, 1),   e: new Date(y, 11, 31) };
-    return null; // 'todos'
+    const end = (ey, em, ed) => { const d = new Date(ey, em, ed); d.setHours(23,59,59,999); return d; };
+    const start = (sy, sm, sd = 1) => { const d = new Date(sy, sm, sd); d.setHours(0,0,0,0); return d; };
+    if (p === 'mes')      return { s: start(y, m),   e: end(y, m+1, 0) };
+    if (p === 'anterior') return { s: start(y, m-1), e: end(y, m, 0)   };
+    if (p === 'proximo')  return { s: start(y, m+1), e: end(y, m+2, 0) };
+    if (p === 'trim')     return { s: start(y, m),   e: end(y, m+3, 0) };
+    if (p === 'ano')      return { s: start(y, 0),   e: end(y, 12, 0)  };
+    return null;
   }
   const pRange = getPeriodRange(fperiodo);
 
@@ -2931,7 +2942,10 @@ function renderContas() {
       if (fcat    && c.cat !== fcat)  return false;
       if (search  && !c.desc.toLowerCase().includes(search)) return false;
       if (pRange) {
-        const d = new Date(c.venc + 'T12:00:00');
+        if (!c.venc) return false; // sem vencimento, ignora
+        const vencStr = String(c.venc).substring(0, 10); // garante formato YYYY-MM-DD
+        const d = new Date(vencStr + 'T12:00:00');
+        if (isNaN(d.getTime())) return false;
         if (d < pRange.s || d > pRange.e) return false;
       }
       return true;
