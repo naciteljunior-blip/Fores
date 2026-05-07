@@ -4960,22 +4960,22 @@ document.addEventListener('keydown', e => {
     ">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
         <span style="font-size:20px">🔑</span>
-        <span style="font-size:16px;font-weight:600;color:#e8e8f0;letter-spacing:-.3px">Configurar API Key</span>
+        <span style="font-size:16px;font-weight:600;color:#e8e8f0;letter-spacing:-.3px">Configurar API Key — Gemini</span>
       </div>
       <p style="font-size:12.5px;color:#8888a0;margin-bottom:20px;line-height:1.6">
-        Insira sua chave da API da Anthropic para ativar o assistente financeiro com IA.<br>
-        <a href="https://console.anthropic.com/settings/keys" target="_blank"
+        Insira sua chave da API do Google Gemini para ativar o assistente financeiro.<br>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank"
            style="color:#9b8ff5;text-decoration:none">
-          Obter chave em console.anthropic.com →
+          Obter chave gratuita em aistudio.google.com →
         </a>
       </p>
       <div style="margin-bottom:16px">
         <label style="font-size:10.5px;font-weight:500;color:#8888a0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">
-          Anthropic API Key
+          Google Gemini API Key
         </label>
         <div style="position:relative">
           <input id="chat-apikey-input" type="password"
-            placeholder="sk-ant-api03-..."
+            placeholder="AIza..."
             style="width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;
                    color:#e8e8f0;background:#111115;border:1px solid #2a2a35;
                    border-radius:6px;padding:10px 40px 10px 12px;outline:none;
@@ -5138,17 +5138,42 @@ function salvarApiKeyModal() {
   const statusEl = document.getElementById('chat-apikey-status');
 
   if (nova.length > 10) {
-    setApiKey(nova);
-    verificarApiKey();
-    fecharModalApiKey();
-    chatAdicionarMensagem('ai', '✅ Chave de API configurada! Agora posso analisar suas mensagens. Pode mandar!');
+    // Mostrar "testando..."
+    statusEl.innerHTML = `<span style="color:#fbbf24">⏳ Validando chave...</span>`;
+    // Teste rápido com Gemini
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${nova}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ role:'user', parts:[{ text:'ok' }] }], generationConfig:{ maxOutputTokens:5 } })
+    })
+    .then(async r => {
+      if (r.ok) {
+        setApiKey(nova);
+        verificarApiKey();
+        fecharModalApiKey();
+        chatAdicionarMensagem('ai', '✅ Chave Gemini validada e configurada! Pode mandar suas mensagens 🚀');
+      } else {
+        const err = await r.json().catch(() => ({}));
+        const detalhe = err?.error?.message || `HTTP ${r.status}`;
+        statusEl.innerHTML = `<span style="color:#f87171">❌ Chave inválida: ${detalhe}</span>`;
+        document.getElementById('chat-apikey-input').style.borderColor = '#f87171';
+        document.getElementById('chat-apikey-input').style.boxShadow = '0 0 0 3px rgba(248,113,113,.15)';
+      }
+    })
+    .catch(() => {
+      // Sem internet — salva mesmo assim
+      setApiKey(nova);
+      verificarApiKey();
+      fecharModalApiKey();
+      chatAdicionarMensagem('ai', '✅ Chave salva! (não foi possível validar agora — sem conexão)');
+    });
   } else if (nova === '') {
     setApiKey('');
     verificarApiKey();
     fecharModalApiKey();
     statusEl.innerHTML = '';
   } else {
-    statusEl.innerHTML = `<span style="color:#f87171">⚠ Chave inválida. Verifique e tente novamente.</span>`;
+    statusEl.innerHTML = `<span style="color:#f87171">⚠ Chave inválida. Chaves Gemini começam com "AIza..."</span>`;
     document.getElementById('chat-apikey-input').style.borderColor = '#f87171';
     document.getElementById('chat-apikey-input').style.boxShadow = '0 0 0 3px rgba(248,113,113,.15)';
   }
@@ -5387,12 +5412,21 @@ Regras:
   } catch(e) {
     chatTyping(false);
     let msg = '❌ Erro ao conectar com a IA.';
-    if (e.message.includes('401')) msg = '❌ Chave de API inválida. Clique em ⚠️ para reconfigurar.';
-    else if (e.message.includes('429')) msg = '❌ Limite de requisições. Aguarde um momento.';
-    else if (e.message.includes('Failed to fetch')) msg = '❌ Sem conexão. Verifique sua internet.';
+    const errText = e.message || '';
+    if (errText.includes('401') || errText.includes('API_KEY_INVALID') || errText.includes('invalid')) {
+      msg = '❌ Chave de API inválida ou expirada. Clique em ⚙️ no canto superior do chat para reconfigurar.';
+    } else if (errText.includes('403')) {
+      msg = '❌ Acesso negado (403). Verifique se a chave tem permissão para usar o Gemini API.';
+    } else if (errText.includes('429')) {
+      msg = '❌ Limite de requisições atingido (429). Aguarde alguns instantes e tente de novo.';
+    } else if (errText.includes('Failed to fetch') || errText.includes('NetworkError')) {
+      msg = '❌ Sem conexão com a internet. Verifique sua rede.';
+    } else if (errText) {
+      msg = `❌ Erro: ${errText}`;
+    }
     chatAdicionarMensagem('ai', msg);
     chatStatus('Erro', '#f87171');
-    setTimeout(() => chatStatus('Pronto para ajudar'), 3000);
+    setTimeout(() => chatStatus('Pronto para ajudar'), 4000);
   }
 
   chatCarregando = false;
