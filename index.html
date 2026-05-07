@@ -4932,11 +4932,102 @@ document.addEventListener('keydown', e => {
         <span id="chat-status-text">Pronto para ajudar</span>
       </div>
     </div>
+    <button id="chat-config-btn" onclick="abrirModalApiKey()" title="Configurar chave de API" style="
+      background:none; border:none; cursor:pointer; padding:5px 7px;
+      border-radius:6px; color:#8888a0; font-size:16px; line-height:1;
+      transition:all .2s; margin-right:2px;
+    " onmouseover="this.style.background='rgba(124,111,234,.15)';this.style.color='#9b8ff5'"
+       onmouseout="this.style.background='none';this.style.color='#8888a0'">⚙️</button>
     <button id="chat-close" onclick="toggleChat()">✕</button>
   </div>
 
-  <div id="chat-apikey-banner" onclick="configurarApiKey()" style="display:none">
-    ⚠️ Configure sua chave de API do Gemini para usar o assistente
+  <div id="chat-apikey-banner" onclick="abrirModalApiKey()" style="display:none">
+    ⚠️ Configure sua chave de API para usar o assistente
+  </div>
+
+  <!-- Modal de configuração da API Key -->
+  <div id="chat-apikey-modal" style="
+    display:none; position:fixed; inset:0; z-index:600;
+    background:rgba(0,0,0,.65); backdrop-filter:blur(4px);
+    align-items:center; justify-content:center;
+  ">
+    <div style="
+      background:#18181d; border:1px solid #2a2a35;
+      border-radius:14px; padding:28px 26px 22px;
+      width:100%; max-width:420px; margin:16px;
+      box-shadow:0 24px 64px rgba(0,0,0,.6);
+      animation:boxIn .22s cubic-bezier(.4,0,.2,1);
+    ">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:20px">🔑</span>
+        <span style="font-size:16px;font-weight:600;color:#e8e8f0;letter-spacing:-.3px">Configurar API Key</span>
+      </div>
+      <p style="font-size:12.5px;color:#8888a0;margin-bottom:20px;line-height:1.6">
+        Insira sua chave da API da Anthropic para ativar o assistente financeiro com IA.<br>
+        <a href="https://console.anthropic.com/settings/keys" target="_blank"
+           style="color:#9b8ff5;text-decoration:none">
+          Obter chave em console.anthropic.com →
+        </a>
+      </p>
+      <div style="margin-bottom:16px">
+        <label style="font-size:10.5px;font-weight:500;color:#8888a0;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">
+          Anthropic API Key
+        </label>
+        <div style="position:relative">
+          <input id="chat-apikey-input" type="password"
+            placeholder="sk-ant-api03-..."
+            style="width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;
+                   color:#e8e8f0;background:#111115;border:1px solid #2a2a35;
+                   border-radius:6px;padding:10px 40px 10px 12px;outline:none;
+                   transition:border-color .2s,box-shadow .2s"
+            onfocus="this.style.borderColor='#7c6fea';this.style.boxShadow='0 0 0 3px rgba(124,111,234,.2)'"
+            onblur="this.style.borderColor='#2a2a35';this.style.boxShadow='none'"
+            onkeydown="if(event.key==='Enter')salvarApiKeyModal()">
+          <button onclick="toggleApiKeyVis()" style="
+            position:absolute;right:10px;top:50%;transform:translateY(-50%);
+            background:none;border:none;cursor:pointer;color:#55556a;font-size:15px;
+            line-height:1;padding:0;transition:color .15s
+          " title="Mostrar/ocultar" onmouseover="this.style.color='#9b8ff5'" onmouseout="this.style.color='#55556a'">
+            <span id="chat-apikey-eye">👁</span>
+          </button>
+        </div>
+        <div id="chat-apikey-status" style="font-size:11px;margin-top:7px;min-height:16px"></div>
+      </div>
+      <div style="
+        background:rgba(124,111,234,.07);border:1px solid rgba(124,111,234,.15);
+        border-radius:8px;padding:10px 13px;margin-bottom:18px;
+        font-size:11.5px;color:#8888a0;line-height:1.6
+      ">
+        🔒 Sua chave fica salva <strong style="color:#e8e8f0">apenas no seu navegador</strong> (localStorage) e nunca é enviada a terceiros.
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="fecharModalApiKey()" style="
+          padding:8px 18px;font-size:13px;font-weight:500;border-radius:6px;
+          border:1px solid #2a2a35;background:#1e1e25;color:#8888a0;
+          cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif
+        " onmouseover="this.style.background='#2a2a35';this.style.color='#e8e8f0'"
+           onmouseout="this.style.background='#1e1e25';this.style.color='#8888a0'">
+          Cancelar
+        </button>
+        <button id="chat-apikey-clear-btn" onclick="limparApiKeyModal()" style="
+          padding:8px 16px;font-size:13px;font-weight:500;border-radius:6px;
+          border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#f87171;
+          cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;display:none
+        " onmouseover="this.style.background='rgba(248,113,113,.15)'"
+           onmouseout="this.style.background='rgba(248,113,113,.08)'">
+          🗑 Remover
+        </button>
+        <button onclick="salvarApiKeyModal()" style="
+          padding:8px 20px;font-size:13px;font-weight:500;border-radius:6px;
+          border:none;background:linear-gradient(135deg,#7c6fea,#6257d4);color:#fff;
+          cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;
+          box-shadow:0 2px 12px rgba(124,111,234,.35)
+        " onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 18px rgba(124,111,234,.45)'"
+           onmouseout="this.style.transform='none';this.style.boxShadow='0 2px 12px rgba(124,111,234,.35)'">
+          💾 Salvar
+        </button>
+      </div>
+    </div>
   </div>
 
   <div id="chat-suggestions">
@@ -4994,25 +5085,87 @@ function setApiKey(k) { localStorage.setItem('nexflow_claude_key', k); }
 
 function verificarApiKey() {
   const banner = document.getElementById('chat-apikey-banner');
-  banner.style.display = getApiKey() ? 'none' : 'flex';
+  const configBtn = document.getElementById('chat-config-btn');
+  const temChave = !!getApiKey();
+  banner.style.display = temChave ? 'none' : 'flex';
+  // Destaca o botão ⚙️ em amber quando sem chave
+  configBtn.style.color = temChave ? '#8888a0' : '#fbbf24';
+  configBtn.title = temChave ? 'Configurar chave de API ✓' : '⚠️ Chave de API não configurada';
 }
 
-function configurarApiKey() {
+function configurarApiKey() { abrirModalApiKey(); }
+
+function abrirModalApiKey() {
+  const modal = document.getElementById('chat-apikey-modal');
+  const input = document.getElementById('chat-apikey-input');
+  const clearBtn = document.getElementById('chat-apikey-clear-btn');
+  const statusEl = document.getElementById('chat-apikey-status');
   const atual = getApiKey();
-  const nova = prompt('Cole sua chave de API do Gemini (Google AI):\n\nObtida em: https://aistudio.google.com/app/apikey', atual);
-  if (nova !== null) {
-    if (nova.trim().length > 10) {
-      setApiKey(nova.trim());
-      verificarApiKey();
-      chatAdicionarMensagem('ai', '✅ Chave Gemini configurada! Agora posso analisar suas mensagens. Pode mandar!');
-    } else if (nova.trim() === '') {
-      setApiKey('');
-      verificarApiKey();
-    } else {
-      alert('Chave inválida. Verifique sua chave no Google AI Studio.');
-    }
+
+  // Preenche com a chave atual (mascarada)
+  input.value = atual;
+  input.type = 'password';
+  document.getElementById('chat-apikey-eye').textContent = '👁';
+
+  // Mostra botão remover só se já tem chave
+  clearBtn.style.display = atual ? 'inline-flex' : 'none';
+
+  // Status da chave atual
+  if (atual) {
+    const trecho = atual.slice(0, 12) + '••••••••' + atual.slice(-4);
+    statusEl.innerHTML = `<span style="color:#34d399">✓ Chave salva: <span style="font-family:var(--mono);font-size:10.5px">${trecho}</span></span>`;
+  } else {
+    statusEl.innerHTML = `<span style="color:#fbbf24">⚠ Nenhuma chave configurada</span>`;
+  }
+
+  modal.style.display = 'flex';
+  setTimeout(() => input.focus(), 100);
+}
+
+function fecharModalApiKey() {
+  document.getElementById('chat-apikey-modal').style.display = 'none';
+}
+
+function toggleApiKeyVis() {
+  const input = document.getElementById('chat-apikey-input');
+  const eye   = document.getElementById('chat-apikey-eye');
+  if (input.type === 'password') { input.type = 'text'; eye.textContent = '🙈'; }
+  else                           { input.type = 'password'; eye.textContent = '👁'; }
+}
+
+function salvarApiKeyModal() {
+  const nova = document.getElementById('chat-apikey-input').value.trim();
+  const statusEl = document.getElementById('chat-apikey-status');
+
+  if (nova.length > 10) {
+    setApiKey(nova);
+    verificarApiKey();
+    fecharModalApiKey();
+    chatAdicionarMensagem('ai', '✅ Chave de API configurada! Agora posso analisar suas mensagens. Pode mandar!');
+  } else if (nova === '') {
+    setApiKey('');
+    verificarApiKey();
+    fecharModalApiKey();
+    statusEl.innerHTML = '';
+  } else {
+    statusEl.innerHTML = `<span style="color:#f87171">⚠ Chave inválida. Verifique e tente novamente.</span>`;
+    document.getElementById('chat-apikey-input').style.borderColor = '#f87171';
+    document.getElementById('chat-apikey-input').style.boxShadow = '0 0 0 3px rgba(248,113,113,.15)';
   }
 }
+
+function limparApiKeyModal() {
+  setApiKey('');
+  verificarApiKey();
+  document.getElementById('chat-apikey-input').value = '';
+  document.getElementById('chat-apikey-status').innerHTML = `<span style="color:#fbbf24">⚠ Nenhuma chave configurada</span>`;
+  document.getElementById('chat-apikey-clear-btn').style.display = 'none';
+}
+
+// Fecha modal ao clicar fora
+document.getElementById('chat-apikey-modal').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalApiKey();
+});
 
 // ── Mensagem de boas-vindas ───────────────────────────────────
 function chatMensagemBoas() {
